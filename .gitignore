@@ -1,0 +1,14 @@
+# OAuth credentials — NEVER commit these
+tokens.json
+client_secret_*.json
+
+# Environment
+.env
+.env.local
+.env*.local
+
+# Vercel
+.vercel/
+
+# Node
+node_modules/

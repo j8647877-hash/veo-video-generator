@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Generator — AI Studio</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f0f13;
+      color: #e8e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      border-bottom: 1px solid #1e1e2a;
+      background: #0f0f13;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #666;
+      font-size: 0.875rem;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .back-btn:hover { color: #e8e8f0; }
+
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #1a1a24;
+      border: 1px solid #2a2a3a;
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 0.82rem;
+      color: #aaa;
+    }
+
+    .user-dot {
+      width: 7px;
+      height: 7px;
+      background: #4caf6e;
+      border-radius: 50%;
+    }
+
+    .btn-sign-out {
+      background: none;
+      border: none;
+      color: #555;
+      font-size: 0.78rem;
+      cursor: pointer;
+      font-family: inherit;
+      margin-left: 4px;
+      transition: color 0.2s;
+    }
+    .btn-sign-out:hover { color: #e8e8f0; }
+
+    /* ── Page body ── */
+    .page-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 780px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    header { text-align: center; }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #7c6af7, #4db6ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+    }
+
+    header p { margin-top: 8px; color: #888; font-size: 0.95rem; }
+
+    .card {
+      background: #1a1a24;
+      border: 1px solid #2a2a3a;
+      border-radius: 14px;
+      padding: 24px;
+    }
+
+    .card h2 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #666;
+      margin-bottom: 16px;
+    }
+
+    label { display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 6px; }
+
+    input[type="text"], textarea, select {
+      width: 100%;
+      background: #111118;
+      border: 1px solid #2e2e42;
+      border-radius: 8px;
+      color: #e8e8f0;
+      font-size: 0.95rem;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+
+    input[type="text"]:focus, textarea:focus, select:focus { border-color: #7c6af7; }
+    textarea { resize: vertical; min-height: 100px; }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+
+    .token-note {
+      margin-top: 10px;
+      font-size: 0.8rem;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    .token-note code {
+      background: #0f0f18;
+      border: 1px solid #2a2a3a;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: "SF Mono", "Consolas", monospace;
+      color: #7c6af7;
+      font-size: 0.85em;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px 28px;
+      background: linear-gradient(135deg, #7c6af7, #4db6ff);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.01em;
+    }
+    .btn-primary:hover:not(:disabled) { opacity: 0.88; }
+    .btn-primary:active:not(:disabled) { transform: scale(0.99); }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    #status-area { display: none; flex-direction: column; gap: 12px; }
+    #status-area.visible { display: flex; }
+
+    .status-box {
+      background: #111118;
+      border: 1px solid #2e2e42;
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-size: 0.88rem;
+      color: #aaa;
+    }
+
+    .status-box .status-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    .status-box .status-text { color: #e8e8f0; font-size: 0.95rem; }
+
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid #7c6af7;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .progress-bar-wrap {
+      height: 4px;
+      background: #2a2a3a;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #7c6af7, #4db6ff);
+      width: 0%;
+      transition: width 0.8s ease;
+      border-radius: 2px;
+    }
+
+    #result-area { display: none; }
+    #result-area.visible { display: block; }
+
+    #result-area video {
+      width: 100%;
+      border-radius: 10px;
+      background: #000;
+      border: 1px solid #2a2a3a;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      min-width: 120px;
+      padding: 10px 20px;
+      background: #1e1e2e;
+      border: 1px solid #3a3a54;
+      border-radius: 8px;
+      color: #c0c0d8;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      font-family: inherit;
+      text-align: center;
+      text-decoration: none;
+    }
+    .btn-secondary:hover { background: #25253a; border-color: #7c6af7; color: #e8e8f0; }
+
+    .error-box {
+      background: #1f0f14;
+      border: 1px solid #4a1a28;
+      border-radius: 10px;
+      padding: 16px 20px;
+      color: #f08090;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      display: none;
+    }
+    .error-box.visible { display: block; }
+    .error-box strong { color: #ff6080; }
+
+    details summary {
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #666;
+      padding: 8px 0;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    details summary::before { content: "▶"; font-size: 0.6rem; transition: transform 0.2s; }
+    details[open] summary::before { transform: rotate(90deg); }
+    details .inner { margin-top: 16px; display: flex; flex-direction: column; gap: 16px; }
+
+    .tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      background: #1e1a3a;
+      border: 1px solid #3a3060;
+      border-radius: 4px;
+      color: #7c6af7;
+      padding: 2px 8px;
+      margin-left: 8px;
+      vertical-align: middle;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    @media (max-width: 520px) { .field-row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="/dashboard" class="back-btn">← Dashboard</a>
+  <div class="user-chip">
+    <span class="user-dot"></span>
+    <span id="user-email">…</span>
+    <button class="btn-sign-out" id="sign-out-btn">Sign out</button>
+  </div>
+</nav>
+
+<div class="page-body">
+<div class="container">
+
+  <header>
+    <h1>Video Generator</h1>
+    <p>Generate videos with Veo 3.1 Lite via Google Vertex AI</p>
+  </header>
+
+  <!-- Project -->
+  <div class="card">
+    <h2>Project</h2>
+    <div class="field-row">
+      <div class="field">
+        <label for="project-id">Project ID <span class="tag">required</span></label>
+        <input type="text" id="project-id" placeholder="my-gcp-project" />
+      </div>
+      <div class="field">
+        <label for="location">Region</label>
+        <select id="location">
+          <option value="us-central1" selected>us-central1</option>
+          <option value="europe-west4">europe-west4</option>
+          <option value="asia-southeast1">asia-southeast1</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prompt -->
+  <div class="card">
+    <h2>Video Prompt</h2>
+    <div class="field">
+      <label for="prompt">Describe the video you want to create</label>
+      <textarea id="prompt" placeholder="A serene beach scene with waves crashing at sunset, golden hour lighting, cinematic 4K, slow motion…"></textarea>
+    </div>
+
+    <details style="margin-top:16px">
+      <summary>Advanced options</summary>
+      <div class="inner">
+        <div class="field-row">
+          <div class="field">
+            <label for="duration">Duration</label>
+            <select id="duration">
+              <option value="4s">4 seconds</option>
+              <option value="6s" selected>6 seconds</option>
+              <option value="8s">8 seconds</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="aspect-ratio">Aspect ratio</label>
+            <select id="aspect-ratio">
+              <option value="16:9" selected>16:9 (landscape)</option>
+              <option value="9:16">9:16 (portrait)</option>
+              <option value="1:1">1:1 (square)</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="negative-prompt">Negative prompt (optional)</label>
+          <input type="text" id="negative-prompt" placeholder="blurry, low quality, distorted, text, watermark…" />
+        </div>
+        <div class="field">
+          <label for="model-id">Model</label>
+          <select id="model-id">
+            <option value="veo-3.1-lite-generate-001" selected>veo-3.1-lite-generate-001 (Veo 3.1 Lite)</option>
+            <option value="veo-3.1-fast-generate-001">veo-3.1-fast-generate-001 (Veo 3.1 Fast)</option>
+            <option value="veo-3.1-generate-001">veo-3.1-generate-001 (Veo 3.1 Standard)</option>
+            <option value="veo-3.0-generate-001">veo-3.0-generate-001 (Veo 3.0)</option>
+            <option value="veo-2.0-generate-001">veo-2.0-generate-001 (Veo 2.0)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="gcs-uri">Cloud Storage output URI (optional)</label>
+          <input type="text" id="gcs-uri" placeholder="gs://my-bucket/videos/" />
+          <p class="token-note">
+            If left blank, the video is returned inline. If specified, saved to your GCS bucket.
+          </p>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <button class="btn-primary" id="generate-btn">Create Video</button>
+
+  <div class="error-box" id="error-box"><strong>Error:</strong> <span id="error-msg"></span></div>
+
+  <div id="status-area">
+    <div class="status-box">
+      <div class="status-label">Status</div>
+      <div class="status-text" id="status-text"><span class="spinner"></span> Starting…</div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    </div>
+  </div>
+
+  <div id="result-area" class="card">
+    <h2>Generated Video</h2>
+    <video id="result-video" controls playsinline></video>
+    <div class="result-actions">
+      <a id="download-link" class="btn-secondary" download="veo-video.mp4">Download MP4</a>
+      <button class="btn-secondary" id="new-video-btn">Generate another</button>
+    </div>
+    <p class="token-note" id="gcs-result-note" style="margin-top:12px;display:none">
+      Video saved to GCS: <code id="gcs-uri-result"></code><br/>
+      Download with: <code>gsutil cp &lt;uri&gt; .</code>
+    </p>
+  </div>
+
+</div>
+</div>
+
+<script>
+  // Auth guard
+  const token = sessionStorage.getItem('access_token');
+  if (!token) window.location.href = '/';
+
+  // User info
+  function getEmail() {
+    const t = sessionStorage.getItem('id_token');
+    if (!t) return null;
+    try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email || null; }
+    catch { return null; }
+  }
+  document.getElementById('user-email').textContent = getEmail() || 'Signed in';
+  document.getElementById('sign-out-btn').addEventListener('click', () => { sessionStorage.clear(); window.location.href = '/'; });
+
+  // Pre-fill from config
+  (async function loadConfig() {
+    try {
+      const cfg = await (await fetch('/api/config')).json();
+      if (cfg.bucket && !document.getElementById('gcs-uri').value)
+        document.getElementById('gcs-uri').value = `gs://${cfg.bucket}/`;
+      if (cfg.projectId && !document.getElementById('project-id').value)
+        document.getElementById('project-id').value = cfg.projectId;
+    } catch {}
+    const saved = sessionStorage.getItem('project_id');
+    if (saved && !document.getElementById('project-id').value)
+      document.getElementById('project-id').value = saved;
+  })();
+
+  // ── Generation logic ────────────────────────────────────────────────────────
+
+  async function safeJson(res) {
+    const text = await res.text();
+    try { return JSON.parse(text); }
+    catch (e) { throw new Error(`Non-JSON response (${res.status}): ${text.slice(0,200)}`); }
+  }
+
+  const generateBtn  = document.getElementById('generate-btn');
+  const statusArea   = document.getElementById('status-area');
+  const statusText   = document.getElementById('status-text');
+  const progressBar  = document.getElementById('progress-bar');
+  const resultArea   = document.getElementById('result-area');
+  const resultVideo  = document.getElementById('result-video');
+  const downloadLink = document.getElementById('download-link');
+  const newVideoBtn  = document.getElementById('new-video-btn');
+  const errorBox     = document.getElementById('error-box');
+  const errorMsg     = document.getElementById('error-msg');
+  const gcsNote      = document.getElementById('gcs-result-note');
+  const gcsUriResult = document.getElementById('gcs-uri-result');
+
+  function setStatus(text, progress) {
+    statusText.innerHTML = `<span class="spinner"></span> ${text}`;
+    if (progress !== undefined) progressBar.style.width = progress + '%';
+  }
+  function showError(msg) { errorBox.classList.add('visible'); errorMsg.textContent = msg; }
+  function clearError()   { errorBox.classList.remove('visible'); errorMsg.textContent = ''; }
+  function sleep(ms)      { return new Promise(r => setTimeout(r, ms)); }
+
+  generateBtn.addEventListener('click', async () => {
+    clearError();
+    resultArea.classList.remove('visible');
+    resultVideo.src = '';
+    gcsNote.style.display = 'none';
+
+    const projectId   = document.getElementById('project-id').value.trim();
+    const location    = document.getElementById('location').value;
+    const prompt      = document.getElementById('prompt').value.trim();
+    const duration    = document.getElementById('duration').value;
+    const aspectRatio = document.getElementById('aspect-ratio').value;
+    const negPrompt   = document.getElementById('negative-prompt').value.trim();
+    const modelId     = document.getElementById('model-id').value;
+    const gcsUri      = document.getElementById('gcs-uri').value.trim();
+
+    if (!projectId) { showError('Please enter your GCP Project ID.'); return; }
+    if (!prompt)    { showError('Please enter a video prompt.'); return; }
+
+    generateBtn.disabled = true;
+    statusArea.classList.add('visible');
+    setStatus('Submitting request to Vertex AI…', 5);
+
+    const vertexPath = `/v1/projects/${projectId}/locations/${location}/publishers/google/models/${modelId}:predictLongRunning`;
+    const instance = { prompt, aspectRatio, duration };
+    if (negPrompt) instance.negativePrompt = negPrompt;
+    const parameters = { sampleCount: 1 };
+    if (gcsUri) parameters.storageUri = gcsUri;
+    const body = JSON.stringify({ instances: [instance], parameters });
+
+    let operationName;
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'X-Vertex-Path': vertexPath },
+        body,
+      });
+      const data = await safeJson(res);
+      if (res.status === 401) { sessionStorage.clear(); window.location.href = '/'; return; }
+      if (!res.ok) throw new Error(`API error ${res.status}: ${data?.error?.message || JSON.stringify(data)}`);
+      operationName = data.name;
+      if (!operationName) throw new Error('No operation name returned: ' + JSON.stringify(data));
+    } catch (err) {
+      showError(err.message); statusArea.classList.remove('visible'); generateBtn.disabled = false; return;
+    }
+
+    setStatus('Video generation in progress…', 15);
+    const maxAttempts = 80, pollInterval = 12000;
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      await sleep(pollInterval);
+      attempts++;
+      setStatus(`Generating video… (${attempts * 12}s elapsed)`, Math.min(90, 15 + Math.round((attempts/maxAttempts)*75)));
+
+      let opData;
+      try {
+        const pollRes = await fetch(`/api/poll?operation=${encodeURIComponent(operationName)}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        opData = await safeJson(pollRes);
+        if (!pollRes.ok) throw new Error(`Poll error ${pollRes.status}: ${opData?.error?.message || JSON.stringify(opData)}`);
+      } catch (err) {
+        showError(err.message); statusArea.classList.remove('visible'); generateBtn.disabled = false; return;
+      }
+
+      if (opData.done) {
+        setStatus('Done! Processing video…', 95);
+        if (opData.error) {
+          showError('Generation failed: ' + (opData.error.message || JSON.stringify(opData.error)));
+          statusArea.classList.remove('visible'); generateBtn.disabled = false; return;
+        }
+
+        const predictions = opData?.response?.predictions || opData?.response?.videos;
+        if (!predictions || predictions.length === 0) {
+          showError('No predictions in response: ' + JSON.stringify(opData.response));
+          statusArea.classList.remove('visible'); generateBtn.disabled = false; return;
+        }
+
+        const pred = predictions[0];
+        const videoBase64 = pred?.bytesBase64Encoded || pred?.videoContent
+          || pred?.generatedSamples?.[0]?.video?.encodedVideo || pred?.generatedSamples?.[0]?.rawContent;
+        const videoGcsUri = pred?.videoUri || pred?.gcsUri || pred?.generatedSamples?.[0]?.videoUri;
+
+        if (videoBase64) {
+          const blob = base64ToBlob(videoBase64, 'video/mp4');
+          const url = URL.createObjectURL(blob);
+          resultVideo.src = url; downloadLink.href = url; downloadLink.style.display = '';
+          resultArea.classList.add('visible'); setStatus('Complete!', 100);
+          setTimeout(() => { statusArea.classList.remove('visible'); progressBar.style.width = '0%'; }, 2000);
+
+        } else if (videoGcsUri) {
+          setStatus('Loading video from Cloud Storage…', 97);
+          try {
+            const match = videoGcsUri.match(/^gs:\/\/([^/]+)\/(.+)$/);
+            if (!match) throw new Error('Bad GCS URI');
+            const [, bucket, object] = match;
+            const vRes = await fetch(`https://storage.googleapis.com/storage/v1/b/${bucket}/o/${encodeURIComponent(object)}?alt=media`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (!vRes.ok) throw new Error(`GCS ${vRes.status}`);
+            const blob = await vRes.blob();
+            const url = URL.createObjectURL(blob);
+            resultVideo.src = url; resultVideo.style.display = ''; downloadLink.href = url; downloadLink.style.display = ''; gcsNote.style.display = 'none';
+          } catch {
+            gcsUriResult.textContent = videoGcsUri; gcsNote.style.display = ''; downloadLink.style.display = 'none'; resultVideo.style.display = 'none';
+          }
+          resultArea.classList.add('visible'); setStatus('Complete!', 100);
+          setTimeout(() => { statusArea.classList.remove('visible'); progressBar.style.width = '0%'; }, 2000);
+
+        } else {
+          showError('Unexpected response: ' + JSON.stringify(opData.response));
+          statusArea.classList.remove('visible');
+        }
+
+        generateBtn.disabled = false; return;
+      }
+    }
+
+    showError('Timed out after ~16 min. Operation may still be running: ' + operationName);
+    statusArea.classList.remove('visible'); generateBtn.disabled = false;
+  });
+
+  newVideoBtn.addEventListener('click', () => {
+    resultArea.classList.remove('visible'); resultVideo.src = ''; resultVideo.style.display = '';
+    gcsNote.style.display = 'none'; downloadLink.style.display = ''; clearError();
+    document.getElementById('prompt').focus();
+  });
+
+  function base64ToBlob(b64, mimeType) {
+    const bytes = atob(b64), arr = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+    return new Blob([arr], { type: mimeType });
+  }
+</script>
+</body>
+</html>

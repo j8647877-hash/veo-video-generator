@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Generator — AI Studio</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f0f13;
+      color: #e8e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      border-bottom: 1px solid #1e1e2a;
+      background: #0f0f13;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #666;
+      font-size: 0.875rem;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .back-btn:hover { color: #e8e8f0; }
+
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #1a1a24;
+      border: 1px solid #2a2a3a;
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 0.82rem;
+      color: #aaa;
+    }
+    .user-dot { width: 7px; height: 7px; background: #4caf6e; border-radius: 50%; }
+    .btn-sign-out {
+      background: none; border: none; color: #555; font-size: 0.78rem;
+      cursor: pointer; font-family: inherit; margin-left: 4px; transition: color 0.2s;
+    }
+    .btn-sign-out:hover { color: #e8e8f0; }
+
+    /* ── Page body ── */
+    .page-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 780px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    header { text-align: center; }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #f7896a, #ffd04b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+    }
+    header p { margin-top: 8px; color: #888; font-size: 0.95rem; }
+
+    .card {
+      background: #1a1a24;
+      border: 1px solid #2a2a3a;
+      border-radius: 14px;
+      padding: 24px;
+    }
+
+    .card h2 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #666;
+      margin-bottom: 16px;
+    }
+
+    label { display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 6px; }
+
+    input[type="text"], input[type="range"], textarea, select {
+      width: 100%;
+      background: #111118;
+      border: 1px solid #2e2e42;
+      border-radius: 8px;
+      color: #e8e8f0;
+      font-size: 0.95rem;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    input[type="text"]:focus, textarea:focus, select:focus { border-color: #f7896a; }
+    textarea { resize: vertical; min-height: 100px; }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+
+    /* ── Prompt accent color ── */
+    #prompt:focus { border-color: #f7896a; }
+
+    /* ── Range slider ── */
+    .range-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    input[type="range"] {
+      padding: 0;
+      height: 4px;
+      -webkit-appearance: none;
+      background: linear-gradient(90deg, #f7896a var(--pct, 75%), #2e2e42 var(--pct, 75%));
+      border-radius: 2px;
+      cursor: pointer;
+      border: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      background: #f7896a;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .range-value {
+      font-size: 0.85rem;
+      color: #f7896a;
+      font-weight: 600;
+      min-width: 36px;
+      text-align: right;
+    }
+
+    /* ── Reference image upload ── */
+    .upload-area {
+      border: 2px dashed #2e2e42;
+      border-radius: 10px;
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+    .upload-area:hover { border-color: #f7896a; background: #1a1020; }
+    .upload-area.has-image { border-style: solid; border-color: #f7896a50; padding: 12px; }
+
+    .upload-area input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      border: none;
+      background: none;
+    }
+
+    .upload-placeholder { pointer-events: none; }
+    .upload-icon { font-size: 2rem; margin-bottom: 8px; color: #444; }
+    .upload-text { font-size: 0.875rem; color: #666; }
+    .upload-subtext { font-size: 0.75rem; color: #444; margin-top: 4px; }
+
+    .ref-preview {
+      display: none;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .ref-preview.visible { display: flex; }
+
+    .ref-preview img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid #2a2a3a;
+      flex-shrink: 0;
+    }
+
+    .ref-preview-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .ref-filename {
+      font-size: 0.82rem;
+      color: #888;
+      word-break: break-all;
+    }
+
+    .btn-remove-ref {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      background: #1f0f14;
+      border: 1px solid #4a1a28;
+      border-radius: 6px;
+      color: #f08090;
+      font-size: 0.78rem;
+      cursor: pointer;
+      font-family: inherit;
+      width: fit-content;
+      transition: background 0.2s;
+    }
+    .btn-remove-ref:hover { background: #2a1018; }
+
+    /* ── Mode toggle ── */
+    .mode-toggle {
+      display: flex;
+      background: #111118;
+      border: 1px solid #2e2e42;
+      border-radius: 8px;
+      padding: 3px;
+      gap: 3px;
+    }
+
+    .mode-toggle button {
+      flex: 1;
+      padding: 7px 12px;
+      background: none;
+      border: none;
+      border-radius: 6px;
+      color: #666;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .mode-toggle button.active {
+      background: #f7896a20;
+      color: #f7896a;
+    }
+
+    /* ── Generate button ── */
+    .btn-primary {
+      width: 100%;
+      padding: 14px 28px;
+      background: linear-gradient(135deg, #f7896a, #ffd04b);
+      border: none;
+      border-radius: 10px;
+      color: #1a0a00;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.01em;
+    }
+    .btn-primary:hover:not(:disabled) { opacity: 0.88; }
+    .btn-primary:active:not(:disabled) { transform: scale(0.99); }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── Status ── */
+    #status-area { display: none; }
+    #status-area.visible { display: block; }
+
+    .status-box {
+      background: #111118;
+      border: 1px solid #2e2e42;
+      border-radius: 10px;
+      padding: 16px 20px;
+    }
+    .status-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #666;
+      margin-bottom: 6px;
+    }
+    .status-text { color: #e8e8f0; font-size: 0.95rem; }
+
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid #f7896a;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error ── */
+    .error-box {
+      background: #1f0f14;
+      border: 1px solid #4a1a28;
+      border-radius: 10px;
+      padding: 16px 20px;
+      color: #f08090;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      display: none;
+    }
+    .error-box.visible { display: block; }
+    .error-box strong { color: #ff6080; }
+
+    /* ── Results ── */
+    #result-area { display: none; }
+    #result-area.visible { display: block; }
+
+    .images-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 4px;
+    }
+
+    .image-item {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #2a2a3a;
+      background: #111118;
+    }
+
+    .image-item img {
+      width: 100%;
+      display: block;
+      border-radius: 10px;
+    }
+
+    .image-actions {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      background: #111118;
+      border-top: 1px solid #1e1e2a;
+    }
+
+    .btn-img-action {
+      flex: 1;
+      padding: 7px 10px;
+      background: #1e1e2e;
+      border: 1px solid #3a3a54;
+      border-radius: 7px;
+      color: #c0c0d8;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      font-family: inherit;
+      text-align: center;
+      text-decoration: none;
+    }
+    .btn-img-action:hover { background: #25253a; border-color: #f7896a; color: #e8e8f0; }
+
+    .btn-new {
+      width: 100%;
+      padding: 11px 20px;
+      background: #1e1e2e;
+      border: 1px solid #3a3a54;
+      border-radius: 9px;
+      color: #c0c0d8;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      font-family: inherit;
+      margin-top: 16px;
+    }
+    .btn-new:hover { background: #25253a; border-color: #f7896a; color: #e8e8f0; }
+
+    .tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      background: #1e1a14;
+      border: 1px solid #3a3020;
+      border-radius: 4px;
+      color: #f7896a;
+      padding: 2px 8px;
+      margin-left: 8px;
+      vertical-align: middle;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .note {
+      font-size: 0.78rem;
+      color: #555;
+      line-height: 1.5;
+      margin-top: 6px;
+    }
+
+    details summary {
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #666;
+      padding: 8px 0;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    details summary::before { content: "▶"; font-size: 0.6rem; transition: transform 0.2s; }
+    details[open] summary::before { transform: rotate(90deg); }
+    details .inner { margin-top: 16px; display: flex; flex-direction: column; gap: 16px; }
+
+    @media (max-width: 520px) {
+      .field-row, .field-row-3 { grid-template-columns: 1fr; }
+      .images-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="/dashboard" class="back-btn">← Dashboard</a>
+  <div class="user-chip">
+    <span class="user-dot"></span>
+    <span id="user-email">…</span>
+    <button class="btn-sign-out" id="sign-out-btn">Sign out</button>
+  </div>
+</nav>
+
+<div class="page-body">
+<div class="container">
+
+  <header>
+    <h1>Image Generator</h1>
+    <p>Generate images with Gemini Flash via Google Vertex AI</p>
+  </header>
+
+  <!-- Project -->
+  <div class="card">
+    <h2>Project</h2>
+    <div class="field-row">
+      <div class="field">
+        <label for="project-id">Project ID <span class="tag">required</span></label>
+        <input type="text" id="project-id" placeholder="my-gcp-project" />
+      </div>
+      <div class="field">
+        <label for="location">Region</label>
+        <select id="location">
+          <option value="us-central1" selected>us-central1</option>
+          <option value="europe-west4">europe-west4</option>
+          <option value="asia-southeast1">asia-southeast1</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prompt & Controls -->
+  <div class="card">
+    <h2>Image Prompt</h2>
+
+    <div class="field" style="margin-bottom:20px">
+      <label for="prompt">Describe the image you want to create</label>
+      <textarea id="prompt" placeholder="A misty mountain landscape at dawn, dramatic lighting, ultra detailed, 8K…"></textarea>
+    </div>
+
+    <div class="field-row" style="margin-bottom:16px">
+      <div class="field">
+        <label for="style">Style</label>
+        <select id="style">
+          <option value="none">No style preset</option>
+          <option value="Photorealistic">Photorealistic</option>
+          <option value="Cinematic">Cinematic</option>
+          <option value="Digital art">Digital Art</option>
+          <option value="Oil painting">Oil Painting</option>
+          <option value="Watercolor">Watercolor</option>
+          <option value="Pencil sketch">Pencil Sketch</option>
+          <option value="Anime">Anime</option>
+          <option value="3D render">3D Render</option>
+          <option value="Vintage film">Vintage Film</option>
+          <option value="Minimalist">Minimalist</option>
+          <option value="Surrealist">Surrealist</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="aspect-ratio">Aspect Ratio</label>
+        <select id="aspect-ratio">
+          <option value="1:1">1:1 — Square</option>
+          <option value="16:9" selected>16:9 — Landscape</option>
+          <option value="9:16">9:16 — Portrait</option>
+          <option value="4:3">4:3 — Classic</option>
+          <option value="3:4">3:4 — Classic portrait</option>
+          <option value="21:9">21:9 — Ultrawide</option>
+          <option value="3:2">3:2 — Photo</option>
+          <option value="2:3">2:3 — Photo portrait</option>
+        </select>
+      </div>
+    </div>
+
+    <details>
+      <summary>Advanced options</summary>
+      <div class="inner">
+        <div class="field-row">
+          <div class="field">
+            <label for="count">Number of images</label>
+            <select id="count">
+              <option value="1" selected>1</option>
+              <option value="2">2</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="model">Model</label>
+            <input type="text" id="model" value="gemini-2.0-flash-exp" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="negative-prompt">Negative prompt (what to avoid)</label>
+          <input type="text" id="negative-prompt" placeholder="blurry, low quality, distorted, watermark, text, ugly…" />
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Reference Image -->
+  <div class="card">
+    <h2>Reference Image <span style="color:#555;font-size:0.75rem;font-weight:400;text-transform:none;letter-spacing:0">optional</span></h2>
+
+    <div class="upload-area" id="upload-area">
+      <input type="file" id="ref-file" accept="image/*" />
+      <div class="upload-placeholder" id="upload-placeholder">
+        <div class="upload-icon">🖼</div>
+        <div class="upload-text">Click or drag an image here</div>
+        <div class="upload-subtext">PNG, JPG, WEBP — up to 10 MB</div>
+      </div>
+      <div class="ref-preview" id="ref-preview">
+        <img id="ref-thumb" src="" alt="Reference" />
+        <div class="ref-preview-info">
+          <div class="ref-filename" id="ref-filename"></div>
+          <div class="field" style="gap:4px">
+            <label style="font-size:0.78rem;margin-bottom:2px">Mode</label>
+            <div class="mode-toggle">
+              <button id="mode-style" class="active">Style reference</button>
+              <button id="mode-edit">Edit image</button>
+            </div>
+          </div>
+          <p class="note" id="mode-note">The model will match the visual style of your reference when generating a new image.</p>
+          <button class="btn-remove-ref" id="remove-ref">✕ Remove</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="strength-wrap" style="display:none;margin-top:16px">
+      <label for="ref-strength" style="margin-bottom:8px">Reference strength</label>
+      <div class="range-wrap">
+        <input type="range" id="ref-strength" min="0" max="100" value="75" />
+        <span class="range-value" id="strength-val">75%</span>
+      </div>
+      <p class="note">How strongly to follow the reference image. Higher = closer to reference.</p>
+    </div>
+  </div>
+
+  <button class="btn-primary" id="generate-btn">Generate Image</button>
+
+  <div class="error-box" id="error-box"><strong>Error:</strong> <span id="error-msg"></span></div>
+
+  <div id="status-area">
+    <div class="status-box">
+      <div class="status-label">Status</div>
+      <div class="status-text" id="status-text"><span class="spinner"></span> Generating…</div>
+    </div>
+  </div>
+
+  <div id="result-area" class="card">
+    <h2>Generated Images</h2>
+    <div class="images-grid" id="images-grid"></div>
+    <button class="btn-new" id="new-image-btn">Generate another</button>
+  </div>
+
+</div>
+</div>
+
+<script>
+  // Auth guard
+  const token = sessionStorage.getItem('access_token');
+  if (!token) window.location.href = '/';
+
+  // User info & sign out
+  function getEmail() {
+    const t = sessionStorage.getItem('id_token');
+    if (!t) return null;
+    try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email || null; }
+    catch { return null; }
+  }
+  document.getElementById('user-email').textContent = getEmail() || 'Signed in';
+  document.getElementById('sign-out-btn').addEventListener('click', () => { sessionStorage.clear(); window.location.href = '/'; });
+
+  // Pre-fill project ID
+  (async function loadConfig() {
+    try {
+      const cfg = await (await fetch('/api/config')).json();
+      if (cfg.projectId && !document.getElementById('project-id').value)
+        document.getElementById('project-id').value = cfg.projectId;
+    } catch {}
+    const saved = sessionStorage.getItem('project_id');
+    if (saved && !document.getElementById('project-id').value)
+      document.getElementById('project-id').value = saved;
+  })();
+
+  // ── Reference image ──────────────────────────────────────────────────────────
+
+  let refImageData = null;
+  let refImageMime = 'image/jpeg';
+  let refMode      = 'style';
+
+  const refFile       = document.getElementById('ref-file');
+  const uploadArea    = document.getElementById('upload-area');
+  const uploadPlaceholder = document.getElementById('upload-placeholder');
+  const refPreview    = document.getElementById('ref-preview');
+  const refThumb      = document.getElementById('ref-thumb');
+  const refFilename   = document.getElementById('ref-filename');
+  const removeRef     = document.getElementById('remove-ref');
+  const strengthWrap  = document.getElementById('strength-wrap');
+  const modeStyleBtn  = document.getElementById('mode-style');
+  const modeEditBtn   = document.getElementById('mode-edit');
+  const modeNote      = document.getElementById('mode-note');
+  const refStrength   = document.getElementById('ref-strength');
+  const strengthVal   = document.getElementById('strength-val');
+
+  refFile.addEventListener('change', () => {
+    const file = refFile.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { showError('Reference image must be under 10 MB.'); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      const dataUrl = e.target.result;
+      // Strip the data: prefix for API
+      refImageData = dataUrl.split(',')[1];
+      refImageMime = file.type || 'image/jpeg';
+      refThumb.src = dataUrl;
+      refFilename.textContent = file.name;
+      uploadPlaceholder.style.display = 'none';
+      refPreview.classList.add('visible');
+      uploadArea.classList.add('has-image');
+      strengthWrap.style.display = '';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  removeRef.addEventListener('click', e => {
+    e.preventDefault();
+    refImageData = null;
+    refFile.value = '';
+    refThumb.src = '';
+    refFilename.textContent = '';
+    uploadPlaceholder.style.display = '';
+    refPreview.classList.remove('visible');
+    uploadArea.classList.remove('has-image');
+    strengthWrap.style.display = 'none';
+  });
+
+  function setMode(mode) {
+    refMode = mode;
+    if (mode === 'style') {
+      modeStyleBtn.classList.add('active'); modeEditBtn.classList.remove('active');
+      modeNote.textContent = 'The model will match the visual style of your reference when generating a new image.';
+    } else {
+      modeEditBtn.classList.add('active'); modeStyleBtn.classList.remove('active');
+      modeNote.textContent = 'Describe the changes you want. The model will edit the reference image based on your prompt.';
+    }
+  }
+  modeStyleBtn.addEventListener('click', () => setMode('style'));
+  modeEditBtn.addEventListener('click',  () => setMode('edit'));
+
+  // Range slider visual feedback
+  refStrength.addEventListener('input', () => {
+    const v = refStrength.value;
+    strengthVal.textContent = v + '%';
+    refStrength.style.setProperty('--pct', v + '%');
+  });
+
+  // ── Generation ───────────────────────────────────────────────────────────────
+
+  function showError(msg)  { const b = document.getElementById('error-box'); b.classList.add('visible'); document.getElementById('error-msg').textContent = msg; }
+  function clearError()    { document.getElementById('error-box').classList.remove('visible'); document.getElementById('error-msg').textContent = ''; }
+
+  const generateBtn = document.getElementById('generate-btn');
+  const statusArea  = document.getElementById('status-area');
+  const statusText  = document.getElementById('status-text');
+  const resultArea  = document.getElementById('result-area');
+  const imagesGrid  = document.getElementById('images-grid');
+
+  generateBtn.addEventListener('click', async () => {
+    clearError();
+    resultArea.classList.remove('visible');
+    imagesGrid.innerHTML = '';
+
+    const projectId     = document.getElementById('project-id').value.trim();
+    const location      = document.getElementById('location').value;
+    const prompt        = document.getElementById('prompt').value.trim();
+    const style         = document.getElementById('style').value;
+    const aspectRatio   = document.getElementById('aspect-ratio').value;
+    const count         = parseInt(document.getElementById('count').value, 10);
+    const model         = document.getElementById('model').value.trim();
+    const negativePrompt = document.getElementById('negative-prompt').value.trim();
+
+    if (!projectId) { showError('Please enter your GCP Project ID.'); return; }
+    if (!prompt)    { showError('Please describe the image you want to create.'); return; }
+
+    generateBtn.disabled = true;
+    statusArea.classList.add('visible');
+    statusText.innerHTML = `<span class="spinner"></span> Generating ${count > 1 ? count + ' images' : 'image'}…`;
+
+    try {
+      const res = await fetch('/api/image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt, projectId, location, model,
+          aspectRatio, style: style === 'none' ? '' : style,
+          negativePrompt, count,
+          referenceImageData: refImageData,
+          referenceImageMime: refImageMime,
+          referenceMode: refMode,
+          referenceStrength: parseInt(refStrength.value, 10),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.status === 401) { sessionStorage.clear(); window.location.href = '/'; return; }
+      if (!res.ok || data.error) {
+        throw new Error(data.error?.message || `API error ${res.status}`);
+      }
+
+      if (!data.images || data.images.length === 0) {
+        throw new Error('No images returned.');
+      }
+
+      // Render results
+      statusArea.classList.remove('visible');
+
+      for (let i = 0; i < data.images.length; i++) {
+        const img = data.images[i];
+        const dataUrl = `data:${img.mimeType};base64,${img.data}`;
+        const ext     = img.mimeType === 'image/png' ? 'png' : 'jpg';
+
+        const item = document.createElement('div');
+        item.className = 'image-item';
+
+        const imgEl = document.createElement('img');
+        imgEl.src = dataUrl;
+        imgEl.alt = `Generated image ${i + 1}`;
+
+        const actions = document.createElement('div');
+        actions.className = 'image-actions';
+
+        // Download button
+        const dl = document.createElement('a');
+        dl.className = 'btn-img-action';
+        dl.textContent = 'Download';
+        dl.href = dataUrl;
+        dl.download = `ai-studio-image-${Date.now()}-${i + 1}.${ext}`;
+
+        // Use as reference button
+        const useRef = document.createElement('button');
+        useRef.className = 'btn-img-action';
+        useRef.textContent = 'Use as reference';
+        useRef.addEventListener('click', () => {
+          // Load this image as the reference
+          refImageData = img.data;
+          refImageMime = img.mimeType;
+          refThumb.src = dataUrl;
+          refFilename.textContent = `Generated image ${i + 1}`;
+          uploadPlaceholder.style.display = 'none';
+          refPreview.classList.add('visible');
+          uploadArea.classList.add('has-image');
+          strengthWrap.style.display = '';
+          // Scroll to reference section
+          uploadArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+
+        actions.appendChild(dl);
+        actions.appendChild(useRef);
+        item.appendChild(imgEl);
+        item.appendChild(actions);
+        imagesGrid.appendChild(item);
+      }
+
+      resultArea.classList.add('visible');
+
+    } catch (err) {
+      showError(err.message);
+      statusArea.classList.remove('visible');
+    }
+
+    generateBtn.disabled = false;
+  });
+
+  document.getElementById('new-image-btn').addEventListener('click', () => {
+    resultArea.classList.remove('visible');
+    imagesGrid.innerHTML = '';
+    clearError();
+    document.getElementById('prompt').focus();
+  });
+</script>
+</body>
+</html>

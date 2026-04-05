@@ -3,6 +3,7 @@
     { "source": "/dashboard", "destination": "/dashboard.html" },
     { "source": "/video",     "destination": "/video.html"     },
     { "source": "/image",     "destination": "/image.html"     },
-    { "source": "/tts",       "destination": "/tts.html"       }
+    { "source": "/tts",       "destination": "/tts.html"       },
+    { "source": "/script",    "destination": "/script.html"    }
   ]
 }

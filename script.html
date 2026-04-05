@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Script Writer — AI Studio</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f0f13;
+      color: #e8e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      border-bottom: 1px solid #1e1e2a;
+      background: #0f0f13;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .back-btn { display:flex;align-items:center;gap:6px;color:#666;font-size:.875rem;text-decoration:none;transition:color .2s; }
+    .back-btn:hover { color:#e8e8f0; }
+    .user-chip { display:flex;align-items:center;gap:8px;background:#1a1a24;border:1px solid #2a2a3a;border-radius:20px;padding:5px 12px;font-size:.82rem;color:#aaa; }
+    .user-dot  { width:7px;height:7px;background:#4caf6e;border-radius:50%; }
+    .btn-sign-out { background:none;border:none;color:#555;font-size:.78rem;cursor:pointer;font-family:inherit;margin-left:4px;transition:color .2s; }
+    .btn-sign-out:hover { color:#e8e8f0; }
+
+    /* ── Page body ── */
+    .page-body { flex:1;display:flex;flex-direction:column;align-items:center;padding:40px 20px; }
+    .container  { width:100%;max-width:860px;display:flex;flex-direction:column;gap:24px; }
+
+    header { text-align:center; }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #a78bfa, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+    }
+    header p { margin-top:8px;color:#888;font-size:.95rem; }
+
+    /* ── Cards ── */
+    .card { background:#1a1a24;border:1px solid #2a2a3a;border-radius:14px;padding:24px; }
+    .card h2 { font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#666;margin-bottom:16px; }
+
+    label { display:block;font-size:.85rem;color:#aaa;margin-bottom:6px; }
+
+    input[type="text"], textarea, select {
+      width:100%;background:#111118;border:1px solid #2e2e42;border-radius:8px;
+      color:#e8e8f0;font-size:.95rem;padding:10px 14px;outline:none;
+      transition:border-color .2s;font-family:inherit;
+    }
+    input[type="text"]:focus, textarea:focus, select:focus { border-color:#a78bfa; }
+    textarea { resize:vertical; }
+
+    .grid-2 { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
+    .grid-3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px; }
+    .field  { display:flex;flex-direction:column;gap:6px; }
+
+    .note { font-size:.78rem;color:#555;line-height:1.5;margin-top:4px; }
+
+    /* ── Char counter ── */
+    .char-row { display:flex;justify-content:space-between;align-items:center;margin-top:4px; }
+    .char-count { font-size:.75rem;color:#555;transition:color .2s; }
+    .char-count.warn  { color:#f7896a; }
+    .char-count.error { color:#ff6080; }
+
+    /* ── Generate button ── */
+    .btn-primary {
+      width:100%;padding:14px 28px;
+      background:linear-gradient(135deg,#a78bfa,#f472b6);
+      border:none;border-radius:10px;color:#fff;font-size:1rem;font-weight:700;
+      cursor:pointer;transition:opacity .2s,transform .1s;letter-spacing:.01em;
+    }
+    .btn-primary:hover:not(:disabled) { opacity:.88; }
+    .btn-primary:active:not(:disabled) { transform:scale(.99); }
+    .btn-primary:disabled { opacity:.45;cursor:not-allowed; }
+
+    /* ── Error ── */
+    .error-box { background:#1f0f14;border:1px solid #4a1a28;border-radius:10px;padding:16px 20px;color:#f08090;font-size:.9rem;line-height:1.5;display:none; }
+    .error-box.visible { display:block; }
+    .error-box strong { color:#ff6080; }
+
+    /* ── Result area ── */
+    #result-area { display:none; }
+    #result-area.visible { display:block; }
+
+    .result-header {
+      display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;
+    }
+    .result-header h2 { font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#666;margin:0; }
+    .result-actions { display:flex;gap:10px;flex-wrap:wrap; }
+
+    .btn-secondary {
+      padding:8px 18px;background:#1e1e2e;
+      border:1px solid #3a3a54;border-radius:8px;color:#c0c0d8;font-size:.85rem;
+      font-weight:500;cursor:pointer;transition:background .2s,border-color .2s;
+      font-family:inherit;
+    }
+    .btn-secondary:hover { background:#1a1a30;border-color:#a78bfa;color:#e8e8f0; }
+    .btn-secondary:disabled { opacity:.4;cursor:not-allowed; }
+
+    /* ── Script output ── */
+    #script-output {
+      background:#111118;border:1px solid #2e2e42;border-radius:10px;
+      padding:24px 28px;
+      font-size:.92rem;line-height:1.75;color:#e0e0f0;
+      white-space:pre-wrap;word-break:break-word;
+      min-height:120px;
+      max-height:none;
+    }
+
+    /* Markdown-like styling rendered in the output */
+    #script-output .sh  { color:#a78bfa;font-weight:700; }   /* ## headings */
+    #script-output .bold{ color:#e8e8f0;font-weight:600; }   /* **text** */
+    #script-output .dir { color:#f472b6;font-style:italic; } /* [stage directions] */
+    #script-output .spk { color:#60d0f0;font-weight:700; }   /* SPEAKER: */
+
+    /* Streaming cursor */
+    .cursor {
+      display:inline-block;width:2px;height:1em;background:#a78bfa;
+      vertical-align:text-bottom;animation:blink .7s steps(1) infinite;margin-left:1px;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* Token/word counter badge */
+    .meta-row { display:flex;gap:16px;margin-top:10px;flex-wrap:wrap; }
+    .meta-badge { font-size:.75rem;color:#555;background:#111118;border:1px solid #1e1e2a;border-radius:4px;padding:2px 8px; }
+
+    details summary {
+      cursor:pointer;font-size:.85rem;color:#666;padding:8px 0;
+      user-select:none;list-style:none;display:flex;align-items:center;gap:6px;
+    }
+    details summary::before { content:"▶";font-size:.6rem;transition:transform .2s; }
+    details[open] summary::before { transform:rotate(90deg); }
+    details .inner { margin-top:16px;display:flex;flex-direction:column;gap:16px; }
+
+    @media (max-width:600px) {
+      .grid-2, .grid-3 { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="/dashboard" class="back-btn">← Dashboard</a>
+  <div class="user-chip">
+    <span class="user-dot"></span>
+    <span id="user-email">…</span>
+    <button class="btn-sign-out" id="sign-out-btn">Sign out</button>
+  </div>
+</nav>
+
+<div class="page-body">
+<div class="container">
+
+  <header>
+    <h1>Script Writer</h1>
+    <p>AI-powered video scripts via Gemini 2.5 Pro — streamed in real time</p>
+  </header>
+
+  <!-- ── Role / System Prompt ─────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>AI Role</h2>
+    <div class="field">
+      <label for="system-prompt">
+        System prompt
+        <span style="color:#555;font-size:.75rem;font-weight:400;text-transform:none;letter-spacing:0"> — optional, overrides the default role</span>
+      </label>
+      <textarea id="system-prompt" rows="3"
+        placeholder="e.g. You are a seasoned YouTube scriptwriter with 10 years of experience writing educational tech content. You write in a warm, engaging style that hooks viewers in the first 15 seconds and keeps them watching until the end. Always include a strong call-to-action."></textarea>
+      <p class="note">Leave blank to use the default role for the selected script type. Use this for total control over how the AI approaches the writing.</p>
+    </div>
+  </div>
+
+  <!-- ── Script parameters ─────────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>Script Parameters</h2>
+
+    <div class="grid-3" style="margin-bottom:16px">
+      <div class="field">
+        <label for="script-type">Script type</label>
+        <select id="script-type">
+          <optgroup label="Online Video">
+            <option value="YouTube Video" selected>YouTube Video</option>
+            <option value="YouTube Short">YouTube Short</option>
+            <option value="TikTok / Reel">TikTok / Reel</option>
+            <option value="Web Series Episode">Web Series Episode</option>
+          </optgroup>
+          <optgroup label="Broadcast / Film">
+            <option value="Short Film">Short Film</option>
+            <option value="TV Episode">TV Episode</option>
+            <option value="Movie Trailer">Movie Trailer</option>
+            <option value="Documentary">Documentary</option>
+          </optgroup>
+          <optgroup label="Other">
+            <option value="Podcast Script">Podcast Script</option>
+            <option value="Advertisement">Advertisement / Commercial</option>
+            <option value="Educational Video">Educational Video</option>
+            <option value="Corporate Presentation">Corporate Presentation</option>
+            <option value="Product Demo">Product Demo</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="tone">Tone</label>
+        <select id="tone">
+          <option value="Conversational" selected>Conversational</option>
+          <option value="Professional">Professional</option>
+          <option value="Humorous">Humorous / Comedy</option>
+          <option value="Dramatic">Dramatic</option>
+          <option value="Inspirational">Inspirational</option>
+          <option value="Educational">Educational</option>
+          <option value="Storytelling">Storytelling / Narrative</option>
+          <option value="Persuasive">Persuasive / Sales</option>
+          <option value="Neutral">Neutral / Informative</option>
+          <option value="Energetic">Energetic / Hype</option>
+          <option value="Calm and soothing">Calm and Soothing</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="audience">Target audience</label>
+        <select id="audience">
+          <option value="General Public" selected>General Public</option>
+          <option value="Kids (under 7)">Kids (under 7)</option>
+          <option value="Children (7–12)">Children (7–12)</option>
+          <option value="Teens (13–18)">Teens (13–18)</option>
+          <option value="Young Adults (18–30)">Young Adults (18–30)</option>
+          <option value="Adults (30+)">Adults (30+)</option>
+          <option value="Professionals / Business">Professionals / Business</option>
+          <option value="Tech-savvy viewers">Tech-Savvy Viewers</option>
+          <option value="Beginner learners">Beginner Learners</option>
+          <option value="Experts and enthusiasts">Experts &amp; Enthusiasts</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label for="length">Approximate length</label>
+        <select id="length">
+          <option value="Very short (15–30 sec)">Very Short — 15–30 sec</option>
+          <option value="Short (60–90 sec)">Short — 60–90 sec</option>
+          <option value="Medium (3–5 min)" selected>Medium — 3–5 min</option>
+          <option value="Long (7–10 min)">Long — 7–10 min</option>
+          <option value="Very long (15–20 min)">Very Long — 15–20 min</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="format">Format</label>
+        <select id="format">
+          <option value="Single Narrator" selected>Single Narrator</option>
+          <option value="Two Hosts (Dialogue)">Two Hosts — Dialogue</option>
+          <option value="Interview Style">Interview Style</option>
+          <option value="Character-driven Story">Character-driven Story</option>
+          <option value="Voiceover with B-roll cues">Voiceover + B-roll Cues</option>
+          <option value="Tutorial / Step-by-step">Tutorial / Step-by-step</option>
+          <option value="Documentary narration">Documentary Narration</option>
+          <option value="Vlog style">Vlog Style</option>
+        </select>
+      </div>
+    </div>
+
+    <details style="margin-top:16px">
+      <summary>Advanced options</summary>
+      <div class="inner">
+        <div class="grid-2">
+          <div class="field">
+            <label for="language">Language</label>
+            <select id="language">
+              <option value="English" selected>English</option>
+              <option value="Spanish">Spanish</option>
+              <option value="French">French</option>
+              <option value="German">German</option>
+              <option value="Portuguese">Portuguese</option>
+              <option value="Italian">Italian</option>
+              <option value="Japanese">Japanese</option>
+              <option value="Korean">Korean</option>
+              <option value="Mandarin Chinese">Mandarin Chinese</option>
+              <option value="Hindi">Hindi</option>
+              <option value="Arabic">Arabic</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="model-select">Model</label>
+            <select id="model-select">
+              <option value="gemini-2.5-pro-preview-06-05" selected>Gemini 2.5 Pro Preview — Highest quality</option>
+              <option value="gemini-2.5-flash-preview-05-20">Gemini 2.5 Flash Preview — Faster</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- ── Script Prompt ──────────────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>Script Brief</h2>
+    <div class="field">
+      <label for="script-prompt">
+        Prompt <span style="color:#a78bfa;font-size:.72rem;font-weight:600;margin-left:4px">required</span>
+      </label>
+      <textarea id="script-prompt" rows="10"
+        placeholder="Describe your script in as much detail as you want. For example:
+
+Topic: A 5-minute YouTube video explaining how black holes form, aimed at curious non-scientists.
+Hook: Open with the question 'What would happen if the Sun disappeared right now?'
+Structure: Start with the hook, explain stellar evolution in simple terms, transition to supernovas, then explain how gravity collapses the core into a black hole. End with why this matters for understanding the universe.
+Include: At least 2 analogies to make abstract concepts relatable. A suspenseful tone in the black hole section. An outro that teases a follow-up video about what's inside a black hole.
+Avoid: Overly technical jargon. Passive voice. Filler phrases like 'In conclusion'." style="min-height:220px"></textarea>
+      <div class="char-row">
+        <p class="note">Be as detailed as you like — include structure, talking points, what to avoid, references, or specific lines you want included.</p>
+        <span class="char-count" id="char-count">0</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-primary" id="generate-btn">Write Script</button>
+
+  <div class="error-box" id="error-box"><strong>Error:</strong> <span id="error-msg"></span></div>
+
+  <!-- ── Result ───────────────────────────────────────────────────────────────── -->
+  <div id="result-area" class="card">
+    <div class="result-header">
+      <h2>Generated Script</h2>
+      <div class="result-actions">
+        <button class="btn-secondary" id="copy-btn" disabled>Copy</button>
+        <button class="btn-secondary" id="download-btn" disabled>Download TXT</button>
+        <button class="btn-secondary" id="new-btn">Write another</button>
+      </div>
+    </div>
+    <div id="script-output"></div>
+    <div class="meta-row">
+      <span class="meta-badge" id="word-count-badge">Words: —</span>
+      <span class="meta-badge" id="char-count-badge">Characters: —</span>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+  // Auth guard
+  const token = sessionStorage.getItem('access_token');
+  if (!token) window.location.href = '/';
+
+  // User info & sign out
+  function getEmail() {
+    const t = sessionStorage.getItem('id_token');
+    if (!t) return null;
+    try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email || null; }
+    catch { return null; }
+  }
+  document.getElementById('user-email').textContent = getEmail() || 'Signed in';
+  document.getElementById('sign-out-btn').addEventListener('click', () => { sessionStorage.clear(); window.location.href = '/'; });
+
+  // ── Char counter ──────────────────────────────────────────────────────────
+  const promptArea = document.getElementById('script-prompt');
+  const charCount  = document.getElementById('char-count');
+  const SOFT = 3000, HARD = 8000;
+
+  promptArea.addEventListener('input', () => {
+    const len = promptArea.value.length;
+    charCount.textContent = len.toLocaleString();
+    charCount.className = 'char-count' + (len > HARD ? ' error' : len > SOFT ? ' warn' : '');
+  });
+
+  // ── Light rendering: bold / headings / stage directions / speaker labels ──
+  function renderScript(raw) {
+    return raw
+      // **bold** → <span class="bold">
+      .replace(/\*\*(.+?)\*\*/g, '<span class="bold">$1</span>')
+      // ## Heading → styled heading
+      .replace(/^#{1,3} (.+)$/gm, '<span class="sh">$1</span>')
+      // [Stage direction] → pink italic
+      .replace(/\[([^\]]+)\]/g, '<span class="dir">[$1]</span>')
+      // (action) → pink italic
+      .replace(/\(([^)]+)\)/g, '<span class="dir">($1)</span>')
+      // ALLCAPS NAME: at line start → speaker label
+      .replace(/^([A-Z][A-Z0-9 ]{1,24}):/gm, '<span class="spk">$1:</span>');
+  }
+
+  // ── Generation ────────────────────────────────────────────────────────────
+  const generateBtn  = document.getElementById('generate-btn');
+  const resultArea   = document.getElementById('result-area');
+  const scriptOutput = document.getElementById('script-output');
+  const errorBox     = document.getElementById('error-box');
+  const errorMsg     = document.getElementById('error-msg');
+  const copyBtn      = document.getElementById('copy-btn');
+  const downloadBtn  = document.getElementById('download-btn');
+  const wordBadge    = document.getElementById('word-count-badge');
+  const charBadge    = document.getElementById('char-count-badge');
+
+  let rawText = '';
+
+  function showError(msg)  { errorBox.classList.add('visible'); errorMsg.textContent = msg; }
+  function clearError()    { errorBox.classList.remove('visible'); errorMsg.textContent = ''; }
+
+  function updateMeta(text) {
+    const words = text.trim().split(/\s+/).filter(Boolean).length;
+    wordBadge.textContent = `Words: ${words.toLocaleString()}`;
+    charBadge.textContent = `Characters: ${text.length.toLocaleString()}`;
+  }
+
+  generateBtn.addEventListener('click', async () => {
+    clearError();
+    copyBtn.disabled = true;
+    downloadBtn.disabled = true;
+
+    const prompt = promptArea.value.trim();
+    if (!prompt) { showError('Please enter a script brief.'); return; }
+    if (prompt.length > HARD) { showError(`Prompt is too long (${prompt.length} chars). Keep it under ${HARD}.`); return; }
+
+    const payload = {
+      prompt,
+      systemPrompt : document.getElementById('system-prompt').value,
+      scriptType   : document.getElementById('script-type').value,
+      tone         : document.getElementById('tone').value,
+      audience     : document.getElementById('audience').value,
+      length       : document.getElementById('length').value,
+      format       : document.getElementById('format').value,
+      language     : document.getElementById('language').value,
+      model        : document.getElementById('model-select').value,
+    };
+
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'Writing…';
+    rawText = '';
+    scriptOutput.innerHTML = '<span class="cursor"></span>';
+    resultArea.classList.add('visible');
+    resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    try {
+      const res = await fetch('/api/script', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        let msg = `Request failed (${res.status})`;
+        try { const j = await res.json(); msg = j.error || msg; } catch {}
+        throw new Error(msg);
+      }
+
+      const reader = res.body.getReader();
+      const dec    = new TextDecoder();
+      let   buf    = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop(); // keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6).trim();
+          if (payload === '[DONE]') continue;
+          try {
+            const obj = JSON.parse(payload);
+            if (obj.text) {
+              rawText += obj.text;
+              scriptOutput.innerHTML = renderScript(rawText) + '<span class="cursor"></span>';
+            }
+            if (obj.warning) console.warn('Gemini warning:', obj.warning);
+          } catch {}
+        }
+      }
+
+      // Finalize
+      scriptOutput.innerHTML = renderScript(rawText);
+      updateMeta(rawText);
+      copyBtn.disabled = false;
+      downloadBtn.disabled = false;
+
+    } catch (err) {
+      showError(err.message);
+      if (!rawText) resultArea.classList.remove('visible');
+    }
+
+    generateBtn.disabled = false;
+    generateBtn.textContent = 'Write Script';
+  });
+
+  // ── Copy ──────────────────────────────────────────────────────────────────
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(rawText);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => copyBtn.textContent = 'Copy', 2000);
+    } catch {
+      copyBtn.textContent = 'Failed';
+      setTimeout(() => copyBtn.textContent = 'Copy', 2000);
+    }
+  });
+
+  // ── Download ──────────────────────────────────────────────────────────────
+  downloadBtn.addEventListener('click', () => {
+    const blob = new Blob([rawText], { type: 'text/plain' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'script.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // ── New script ────────────────────────────────────────────────────────────
+  document.getElementById('new-btn').addEventListener('click', () => {
+    resultArea.classList.remove('visible');
+    rawText = '';
+    scriptOutput.innerHTML = '';
+    copyBtn.disabled = true;
+    downloadBtn.disabled = true;
+    clearError();
+    promptArea.focus();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+</script>
+</body>
+</html>

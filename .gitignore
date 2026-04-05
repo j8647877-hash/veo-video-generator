@@ -12,3 +12,5 @@ client_secret_*.json
 
 # Node
 node_modules/
+
+.vercel

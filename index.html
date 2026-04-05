@@ -583,6 +583,7 @@
       document.getElementById('user-email').textContent = email || 'Signed in';
       const savedProject = sessionStorage.getItem('project_id');
       if (savedProject) document.getElementById('project-id').value = savedProject;
+      setupBucketCors(token);
     } else {
       signInView.style.display   = '';
       signedInView.style.display = 'none';
@@ -600,6 +601,33 @@
   });
 
   updateAuthUI();
+
+  // Pre-fill GCS URI and project ID from server config (env vars)
+  async function loadConfig() {
+    try {
+      const res  = await fetch('/api/config');
+      const cfg  = await res.json();
+      if (cfg.bucket && !document.getElementById('gcs-uri').value) {
+        document.getElementById('gcs-uri').value = `gs://${cfg.bucket}/`;
+      }
+      if (cfg.projectId && !document.getElementById('project-id').value) {
+        document.getElementById('project-id').value = cfg.projectId;
+      }
+    } catch {}
+  }
+  loadConfig();
+
+  // Configure CORS on the bucket once per session so the browser can fetch videos inline
+  async function setupBucketCors(token) {
+    if (sessionStorage.getItem('cors_setup')) return;
+    try {
+      const res = await fetch('/api/setup-cors', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) sessionStorage.setItem('cors_setup', '1');
+    } catch {}
+  }
 
   // ── Video generation ────────────────────────────────────────────────────────
 
@@ -780,12 +808,32 @@
           setTimeout(() => { statusArea.classList.remove('visible'); progressBar.style.width = '0%'; }, 2000);
 
         } else if (videoGcsUri) {
-          gcsUriResult.textContent = videoGcsUri;
-          gcsNote.style.display = '';
-          downloadLink.style.display = 'none';
-          resultVideo.style.display = 'none';
+          setStatus('Loading video from Cloud Storage…', 97);
+          try {
+            const match = videoGcsUri.match(/^gs:\/\/([^/]+)\/(.+)$/);
+            if (!match) throw new Error('Could not parse GCS URI');
+            const [, bucket, object] = match;
+            const gcsUrl = `https://storage.googleapis.com/storage/v1/b/${bucket}/o/${encodeURIComponent(object)}?alt=media`;
+            const videoRes = await fetch(gcsUrl, {
+              headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (!videoRes.ok) throw new Error(`GCS fetch ${videoRes.status}`);
+            const blob = await videoRes.blob();
+            const url  = URL.createObjectURL(blob);
+            resultVideo.src = url;
+            resultVideo.style.display = '';
+            downloadLink.href = url;
+            downloadLink.style.display = '';
+            gcsNote.style.display = 'none';
+          } catch {
+            // Fallback: show GCS URI with copy instruction
+            gcsUriResult.textContent = videoGcsUri;
+            gcsNote.style.display = '';
+            downloadLink.style.display = 'none';
+            resultVideo.style.display = 'none';
+          }
           resultArea.classList.add('visible');
-          setStatus('Complete! Video saved to Cloud Storage.', 100);
+          setStatus('Complete!', 100);
           setTimeout(() => { statusArea.classList.remove('visible'); progressBar.style.width = '0%'; }, 2000);
 
         } else {

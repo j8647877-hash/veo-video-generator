@@ -156,10 +156,12 @@
 
     .tool-icon.video { background: linear-gradient(135deg, #7c6af730, #4db6ff20); }
     .tool-icon.image { background: linear-gradient(135deg, #f7896a30, #ffd04b20); }
+    .tool-icon.tts   { background: linear-gradient(135deg, #2dc98a30, #00b4d820); }
 
     .tool-icon svg { width: 26px; height: 26px; }
     .tool-icon.video svg { stroke: #7c6af7; }
     .tool-icon.image svg { stroke: #f7896a; }
+    .tool-icon.tts   svg { stroke: #2dc98a; }
 
     .tool-body { flex: 1; }
 
@@ -255,6 +257,25 @@
       </div>
       <div class="tool-footer">
         <span class="tool-tag">Gemini Flash</span>
+        <span class="tool-arrow">→</span>
+      </div>
+    </a>
+
+    <a href="/tts" class="tool-card">
+      <div class="tool-icon tts">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+      </div>
+      <div class="tool-body">
+        <h2>Voiceover</h2>
+        <p>Convert text to natural-sounding speech with 30 voices and multi-speaker dialogue support.</p>
+      </div>
+      <div class="tool-footer">
+        <span class="tool-tag">Gemini 2.5 TTS</span>
         <span class="tool-arrow">→</span>
       </div>
     </a>

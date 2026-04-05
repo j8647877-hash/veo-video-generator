@@ -1,11 +1,11 @@
-// POST /api/script — Generates video scripts via Gemini using streaming SSE.
-// Streams text chunks back as they arrive so the UI can render progressively.
+// POST /api/script — Generates video scripts via Vertex AI Gemini with streaming SSE.
+// Uses the user's Google OAuth token (same pattern as the image/video tools).
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     return res.status(204).end();
   }
 
@@ -13,13 +13,11 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY is not configured.' });
-  }
-
+  const authHeader = req.headers['authorization'];
   const {
     prompt,
+    projectId,
+    location      = 'us-central1',
     systemPrompt  = '',
     scriptType    = 'YouTube Video',
     tone          = 'Conversational',
@@ -27,9 +25,15 @@ module.exports = async function handler(req, res) {
     length        = 'Medium (3–5 min)',
     format        = 'Single Narrator',
     language      = 'English',
-    model         = 'gemini-2.0-flash',
+    model         = 'gemini-2.5-flash',
   } = req.body;
 
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Missing Authorization header. Please sign in.' });
+  }
+  if (!projectId) {
+    return res.status(400).json({ error: 'projectId is required.' });
+  }
   if (!prompt || !prompt.trim()) {
     return res.status(400).json({ error: 'prompt is required.' });
   }
@@ -38,7 +42,7 @@ module.exports = async function handler(req, res) {
   const defaultRole = `You are an expert ${scriptType} scriptwriter. You write compelling, well-structured scripts that engage the target audience from the first line.`;
   const systemInstruction = systemPrompt.trim() || defaultRole;
 
-  // Build the user message with all control parameters woven in
+  // Build the user message with all control parameters
   const userMessage = `Write a ${scriptType} script with the following specifications:
 
 **Format:** ${format}
@@ -53,11 +57,11 @@ ${prompt.trim()}
 ---
 
 Format the script professionally:
-- Use clear scene/section headings
+- Use clear scene/section headings (e.g. ## INTRO, ## MAIN CONTENT, ## OUTRO)
 - Use [STAGE DIRECTION] or (action notes) for visual cues
-- Use SPEAKER NAME: for dialogue/narration labels
+- Use SPEAKER NAME: for dialogue/narration labels where applicable
 - Include a strong hook at the start and a clear call-to-action or closing
-- Add timing estimates per section if relevant
+- Add timing estimates per section in parentheses where relevant
 
 Write the complete, ready-to-use script now.`;
 
@@ -71,15 +75,13 @@ Write the complete, ready-to-use script now.`;
     },
   });
 
-  // Use streaming endpoint
-  const upstream = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`,
-    {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      body:    requestBody,
-    }
-  );
+  const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:streamGenerateContent?alt=sse`;
+
+  const upstream = await fetch(endpoint, {
+    method:  'POST',
+    headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+    body:    requestBody,
+  });
 
   if (!upstream.ok) {
     const errData = await upstream.json().catch(() => ({}));
@@ -87,12 +89,12 @@ Write the complete, ready-to-use script now.`;
     return res.status(upstream.status || 500).json({ error: msg });
   }
 
-  // Pipe SSE stream back to the client
+  // Stream SSE back to the client
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('X-Accel-Buffering', 'no');
 
-  const reader = upstream.body.getReader();
+  const reader  = upstream.body.getReader();
   const decoder = new TextDecoder();
 
   try {
@@ -102,7 +104,6 @@ Write the complete, ready-to-use script now.`;
 
       const chunk = decoder.decode(value, { stream: true });
 
-      // Each SSE line looks like: data: {...json...}
       for (const line of chunk.split('\n')) {
         if (!line.startsWith('data: ')) continue;
         const jsonStr = line.slice(6).trim();
@@ -110,10 +111,7 @@ Write the complete, ready-to-use script now.`;
         try {
           const parsed = JSON.parse(jsonStr);
           const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-            res.write(`data: ${JSON.stringify({ text })}\n\n`);
-          }
-          // Propagate finish reason
+          if (text) res.write(`data: ${JSON.stringify({ text })}\n\n`);
           const finishReason = parsed?.candidates?.[0]?.finishReason;
           if (finishReason && finishReason !== 'STOP') {
             res.write(`data: ${JSON.stringify({ warning: `Finish reason: ${finishReason}` })}\n\n`);

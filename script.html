@@ -171,6 +171,16 @@
     <p>AI-powered video scripts via Gemini 2.5 Pro — streamed in real time</p>
   </header>
 
+  <!-- ── Project ID ───────────────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>Project</h2>
+    <div class="field">
+      <label for="project-id">Google Cloud Project ID <span style="color:#a78bfa;font-size:.72rem;font-weight:600;margin-left:4px">required</span></label>
+      <input type="text" id="project-id" placeholder="my-gcp-project" />
+      <p class="note">Your Vertex AI project. Auto-filled from your sign-in — edit only if needed.</p>
+    </div>
+  </div>
+
   <!-- ── Role / System Prompt ─────────────────────────────────────────────── -->
   <div class="card">
     <h2>AI Role</h2>
@@ -299,9 +309,9 @@
           <div class="field">
             <label for="model-select">Model</label>
             <select id="model-select">
-              <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash — Recommended</option>
-              <option value="gemini-2.5-flash">Gemini 2.5 Flash — Higher quality (requires billing)</option>
-              <option value="gemini-2.5-pro">Gemini 2.5 Pro — Best quality (requires billing)</option>
+              <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash — Recommended</option>
+              <option value="gemini-2.5-pro">Gemini 2.5 Pro — Highest quality</option>
+              <option value="gemini-2.0-flash-001">Gemini 2.0 Flash — Fast &amp; reliable</option>
             </select>
           </div>
         </div>
@@ -370,6 +380,18 @@ Avoid: Overly technical jargon. Passive voice. Filler phrases like 'In conclusio
   document.getElementById('user-email').textContent = getEmail() || 'Signed in';
   document.getElementById('sign-out-btn').addEventListener('click', () => { sessionStorage.clear(); window.location.href = '/'; });
 
+  // Pre-fill project ID
+  (async function loadConfig() {
+    try {
+      const cfg = await (await fetch('/api/config')).json();
+      if (cfg.projectId && !document.getElementById('project-id').value)
+        document.getElementById('project-id').value = cfg.projectId;
+    } catch {}
+    const saved = sessionStorage.getItem('project_id');
+    if (saved && !document.getElementById('project-id').value)
+      document.getElementById('project-id').value = saved;
+  })();
+
   // ── Char counter ──────────────────────────────────────────────────────────
   const promptArea = document.getElementById('script-prompt');
   const charCount  = document.getElementById('char-count');
@@ -427,8 +449,10 @@ Avoid: Overly technical jargon. Passive voice. Filler phrases like 'In conclusio
     if (!prompt) { showError('Please enter a script brief.'); return; }
     if (prompt.length > HARD) { showError(`Prompt is too long (${prompt.length} chars). Keep it under ${HARD}.`); return; }
 
+    const projectId = document.getElementById('project-id').value.trim();
     const payload = {
       prompt,
+      projectId,
       systemPrompt : document.getElementById('system-prompt').value,
       scriptType   : document.getElementById('script-type').value,
       tone         : document.getElementById('tone').value,
@@ -438,6 +462,11 @@ Avoid: Overly technical jargon. Passive voice. Filler phrases like 'In conclusio
       language     : document.getElementById('language').value,
       model        : document.getElementById('model-select').value,
     };
+
+    if (!projectId) {
+      showError('No project ID found. Please sign out and sign back in — the project ID is set during login.');
+      return;
+    }
 
     generateBtn.disabled = true;
     generateBtn.textContent = 'Writing…';
@@ -449,7 +478,7 @@ Avoid: Overly technical jargon. Passive voice. Filler phrases like 'In conclusio
     try {
       const res = await fetch('/api/script', {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body:    JSON.stringify(payload),
       });
 

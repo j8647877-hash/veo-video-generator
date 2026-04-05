@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voiceover — AI Studio</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f0f13;
+      color: #e8e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      border-bottom: 1px solid #1e1e2a;
+      background: #0f0f13;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .back-btn { display:flex;align-items:center;gap:6px;color:#666;font-size:.875rem;text-decoration:none;transition:color .2s; }
+    .back-btn:hover { color:#e8e8f0; }
+    .user-chip { display:flex;align-items:center;gap:8px;background:#1a1a24;border:1px solid #2a2a3a;border-radius:20px;padding:5px 12px;font-size:.82rem;color:#aaa; }
+    .user-dot  { width:7px;height:7px;background:#4caf6e;border-radius:50%; }
+    .btn-sign-out { background:none;border:none;color:#555;font-size:.78rem;cursor:pointer;font-family:inherit;margin-left:4px;transition:color .2s; }
+    .btn-sign-out:hover { color:#e8e8f0; }
+
+    /* ── Page body ── */
+    .page-body { flex:1;display:flex;flex-direction:column;align-items:center;padding:40px 20px; }
+
+    .container { width:100%;max-width:780px;display:flex;flex-direction:column;gap:24px; }
+
+    header { text-align:center; }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #2dc98a, #00b4d8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+    }
+    header p { margin-top:8px;color:#888;font-size:.95rem; }
+
+    /* ── Cards ── */
+    .card { background:#1a1a24;border:1px solid #2a2a3a;border-radius:14px;padding:24px; }
+    .card h2 { font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#666;margin-bottom:16px; }
+
+    label { display:block;font-size:.85rem;color:#aaa;margin-bottom:6px; }
+
+    input[type="text"], textarea, select {
+      width:100%;background:#111118;border:1px solid #2e2e42;border-radius:8px;
+      color:#e8e8f0;font-size:.95rem;padding:10px 14px;outline:none;
+      transition:border-color .2s;font-family:inherit;
+    }
+    input[type="text"]:focus, textarea:focus, select:focus { border-color:#2dc98a; }
+    textarea { resize:vertical; }
+
+    .field-row { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
+    .field { display:flex;flex-direction:column;gap:6px; }
+
+    .note { font-size:.78rem;color:#555;line-height:1.5;margin-top:6px; }
+
+    /* ── Speaker mode toggle ── */
+    .mode-toggle {
+      display:flex;background:#111118;border:1px solid #2e2e42;border-radius:8px;padding:3px;gap:3px;
+    }
+    .mode-toggle button {
+      flex:1;padding:8px 14px;background:none;border:none;border-radius:6px;
+      color:#666;font-size:.88rem;font-weight:500;cursor:pointer;font-family:inherit;transition:background .15s,color .15s;
+    }
+    .mode-toggle button.active { background:#2dc98a20;color:#2dc98a; }
+
+    /* ── Speaker rows ── */
+    .speaker-row {
+      display:grid;grid-template-columns:1fr 2fr;gap:12px;align-items:end;
+    }
+
+    .speaker-divider {
+      text-align:center;color:#444;font-size:.8rem;padding:4px 0;letter-spacing:.05em;
+    }
+
+    /* ── Char counter ── */
+    .char-counter {
+      display:flex;justify-content:space-between;align-items:center;margin-top:6px;
+    }
+    .char-count { font-size:.75rem;color:#555;transition:color .2s; }
+    .char-count.warn  { color:#f7896a; }
+    .char-count.error { color:#ff6080; }
+
+    /* ── Emotion tags cheat sheet ── */
+    .tag-grid {
+      display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;
+    }
+    .tag-chip {
+      background:#111118;border:1px solid #2e2e42;border-radius:6px;
+      padding:4px 10px;font-size:.78rem;color:#888;cursor:pointer;
+      font-family:"SF Mono","Consolas",monospace;transition:border-color .15s,color .15s;
+      user-select:none;
+    }
+    .tag-chip:hover { border-color:#2dc98a;color:#2dc98a; }
+
+    .ssml-grid { margin-top:10px;display:flex;flex-direction:column;gap:6px; }
+    .ssml-row {
+      display:flex;align-items:center;gap:10px;padding:6px 10px;
+      background:#111118;border:1px solid #1e1e2a;border-radius:6px;
+      cursor:pointer;transition:border-color .15s;
+    }
+    .ssml-row:hover { border-color:#2dc98a; }
+    .ssml-code { font-family:"SF Mono","Consolas",monospace;font-size:.75rem;color:#2dc98a;flex:1; }
+    .ssml-desc { font-size:.75rem;color:#555;flex-shrink:0; }
+
+    details summary {
+      cursor:pointer;font-size:.85rem;color:#666;padding:8px 0;
+      user-select:none;list-style:none;display:flex;align-items:center;gap:6px;
+    }
+    details summary::before { content:"▶";font-size:.6rem;transition:transform .2s; }
+    details[open] summary::before { transform:rotate(90deg); }
+    details .inner { margin-top:16px;display:flex;flex-direction:column;gap:16px; }
+
+    /* ── Generate button ── */
+    .btn-primary {
+      width:100%;padding:14px 28px;
+      background:linear-gradient(135deg,#2dc98a,#00b4d8);
+      border:none;border-radius:10px;color:#fff;font-size:1rem;font-weight:700;
+      cursor:pointer;transition:opacity .2s,transform .1s;letter-spacing:.01em;
+    }
+    .btn-primary:hover:not(:disabled) { opacity:.88; }
+    .btn-primary:active:not(:disabled) { transform:scale(.99); }
+    .btn-primary:disabled { opacity:.45;cursor:not-allowed; }
+
+    /* ── Status ── */
+    #status-area { display:none; }
+    #status-area.visible { display:block; }
+    .status-box { background:#111118;border:1px solid #2e2e42;border-radius:10px;padding:16px 20px; }
+    .status-label { font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:#666;margin-bottom:6px; }
+    .status-text { color:#e8e8f0;font-size:.95rem; }
+
+    .spinner {
+      display:inline-block;width:14px;height:14px;border:2px solid #2dc98a;
+      border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;
+      vertical-align:middle;margin-right:8px;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ── Error ── */
+    .error-box { background:#1f0f14;border:1px solid #4a1a28;border-radius:10px;padding:16px 20px;color:#f08090;font-size:.9rem;line-height:1.5;display:none; }
+    .error-box.visible { display:block; }
+    .error-box strong { color:#ff6080; }
+
+    /* ── Result ── */
+    #result-area { display:none; }
+    #result-area.visible { display:block; }
+
+    .audio-player-wrap {
+      background:#111118;border:1px solid #2e2e42;border-radius:10px;padding:20px;
+    }
+
+    audio {
+      width:100%;height:44px;border-radius:6px;outline:none;margin-bottom:14px;
+      filter:invert(0);
+    }
+
+    .result-actions { display:flex;gap:12px;flex-wrap:wrap; }
+
+    .btn-secondary {
+      flex:1;min-width:120px;padding:10px 20px;background:#1e1e2e;
+      border:1px solid #3a3a54;border-radius:8px;color:#c0c0d8;font-size:.9rem;
+      font-weight:500;cursor:pointer;transition:background .2s,border-color .2s;
+      font-family:inherit;text-align:center;text-decoration:none;
+    }
+    .btn-secondary:hover { background:#1a2a28;border-color:#2dc98a;color:#e8e8f0; }
+
+    .tag { display:inline-block;font-size:.72rem;background:#0f2a1e;border:1px solid #1a4a30;border-radius:4px;color:#2dc98a;padding:2px 8px;margin-left:8px;vertical-align:middle;font-weight:600;letter-spacing:.04em; }
+
+    @media (max-width:520px) { .field-row { grid-template-columns:1fr; } .speaker-row { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="/dashboard" class="back-btn">← Dashboard</a>
+  <div class="user-chip">
+    <span class="user-dot"></span>
+    <span id="user-email">…</span>
+    <button class="btn-sign-out" id="sign-out-btn">Sign out</button>
+  </div>
+</nav>
+
+<div class="page-body">
+<div class="container">
+
+  <header>
+    <h1>Voiceover</h1>
+    <p>Natural-sounding speech with 30 voices via Gemini 2.5 TTS</p>
+  </header>
+
+  <!-- Voice configuration -->
+  <div class="card">
+    <h2>Voice</h2>
+
+    <div class="field" style="margin-bottom:18px">
+      <label>Speaker mode</label>
+      <div class="mode-toggle">
+        <button id="mode-single" class="active">Single speaker</button>
+        <button id="mode-multi">Two speakers (dialogue)</button>
+      </div>
+    </div>
+
+    <!-- Single speaker -->
+    <div id="single-config">
+      <div class="field">
+        <label for="voice">Voice</label>
+        <select id="voice">
+          <optgroup label="Female voices">
+            <option value="Aoede">Aoede — Breezy, natural</option>
+            <option value="Achernar">Achernar — Soft, gentle</option>
+            <option value="Autonoe">Autonoe — Bright, optimistic</option>
+            <option value="Callirrhoe">Callirrhoe — Easy-going, relaxed</option>
+            <option value="Despina">Despina — Smooth, flowing</option>
+            <option value="Erinome">Erinome — Clear, precise</option>
+            <option value="Gacrux">Gacrux — Mature, experienced</option>
+            <option value="Kore">Kore — Firm, confident</option>
+            <option value="Laomedeia">Laomedeia — Upbeat, lively</option>
+            <option value="Leda">Leda — Youthful, energetic</option>
+            <option value="Pulcherrima">Pulcherrima — Forward, expressive</option>
+            <option value="Sulafat">Sulafat — Warm, welcoming</option>
+            <option value="Vindemiatrix">Vindemiatrix — Gentle, kind</option>
+            <option value="Zephyr">Zephyr — Bright, cheerful</option>
+          </optgroup>
+          <optgroup label="Male voices">
+            <option value="Achird">Achird — Friendly, approachable</option>
+            <option value="Algenib">Algenib — Gravelly texture</option>
+            <option value="Algieba">Algieba — Smooth, pleasant</option>
+            <option value="Alnilam">Alnilam — Firm, strong</option>
+            <option value="Charon">Charon — Informative, clear</option>
+            <option value="Enceladus">Enceladus — Breathy, soft</option>
+            <option value="Fenrir">Fenrir — Excitable, dynamic</option>
+            <option value="Iapetus">Iapetus — Clear, articulate</option>
+            <option value="Orus">Orus — Firm, decisive</option>
+            <option value="Puck">Puck — Upbeat, energetic</option>
+            <option value="Rasalgethi">Rasalgethi — Informative, professional</option>
+            <option value="Sadachbia">Sadachbia — Lively, animated</option>
+            <option value="Sadaltager">Sadaltager — Knowledgeable, authoritative</option>
+            <option value="Schedar">Schedar — Even, balanced</option>
+            <option value="Umbriel">Umbriel — Easy-going, calm</option>
+            <option value="Zubenelgenubi">Zubenelgenubi — Casual, conversational</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+
+    <!-- Two-speaker config (hidden by default) -->
+    <div id="multi-config" style="display:none">
+      <div class="speaker-row" style="margin-bottom:12px">
+        <div class="field">
+          <label for="speaker1-name">Speaker 1 name</label>
+          <input type="text" id="speaker1-name" value="Alex" />
+        </div>
+        <div class="field">
+          <label for="voice1">Voice</label>
+          <select id="voice1">
+            <optgroup label="Female voices">
+              <option value="Aoede">Aoede — Breezy, natural</option>
+              <option value="Achernar">Achernar — Soft, gentle</option>
+              <option value="Autonoe">Autonoe — Bright, optimistic</option>
+              <option value="Callirrhoe">Callirrhoe — Easy-going, relaxed</option>
+              <option value="Despina">Despina — Smooth, flowing</option>
+              <option value="Erinome">Erinome — Clear, precise</option>
+              <option value="Gacrux">Gacrux — Mature, experienced</option>
+              <option value="Kore">Kore — Firm, confident</option>
+              <option value="Laomedeia">Laomedeia — Upbeat, lively</option>
+              <option value="Leda">Leda — Youthful, energetic</option>
+              <option value="Pulcherrima">Pulcherrima — Forward, expressive</option>
+              <option value="Sulafat">Sulafat — Warm, welcoming</option>
+              <option value="Vindemiatrix">Vindemiatrix — Gentle, kind</option>
+              <option value="Zephyr">Zephyr — Bright, cheerful</option>
+            </optgroup>
+            <optgroup label="Male voices">
+              <option value="Achird">Achird — Friendly, approachable</option>
+              <option value="Algenib">Algenib — Gravelly texture</option>
+              <option value="Algieba">Algieba — Smooth, pleasant</option>
+              <option value="Alnilam">Alnilam — Firm, strong</option>
+              <option value="Charon">Charon — Informative, clear</option>
+              <option value="Enceladus">Enceladus — Breathy, soft</option>
+              <option value="Fenrir">Fenrir — Excitable, dynamic</option>
+              <option value="Iapetus">Iapetus — Clear, articulate</option>
+              <option value="Orus">Orus — Firm, decisive</option>
+              <option value="Puck" selected>Puck — Upbeat, energetic</option>
+              <option value="Rasalgethi">Rasalgethi — Informative, professional</option>
+              <option value="Sadachbia">Sadachbia — Lively, animated</option>
+              <option value="Sadaltager">Sadaltager — Knowledgeable, authoritative</option>
+              <option value="Schedar">Schedar — Even, balanced</option>
+              <option value="Umbriel">Umbriel — Easy-going, calm</option>
+              <option value="Zubenelgenubi">Zubenelgenubi — Casual, conversational</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+
+      <div class="speaker-divider">— Speaker 2 —</div>
+
+      <div class="speaker-row" style="margin-top:12px">
+        <div class="field">
+          <label for="speaker2-name">Speaker 2 name</label>
+          <input type="text" id="speaker2-name" value="Jordan" />
+        </div>
+        <div class="field">
+          <label for="voice2">Voice</label>
+          <select id="voice2">
+            <optgroup label="Female voices">
+              <option value="Aoede" selected>Aoede — Breezy, natural</option>
+              <option value="Achernar">Achernar — Soft, gentle</option>
+              <option value="Autonoe">Autonoe — Bright, optimistic</option>
+              <option value="Callirrhoe">Callirrhoe — Easy-going, relaxed</option>
+              <option value="Despina">Despina — Smooth, flowing</option>
+              <option value="Erinome">Erinome — Clear, precise</option>
+              <option value="Gacrux">Gacrux — Mature, experienced</option>
+              <option value="Kore">Kore — Firm, confident</option>
+              <option value="Laomedeia">Laomedeia — Upbeat, lively</option>
+              <option value="Leda">Leda — Youthful, energetic</option>
+              <option value="Pulcherrima">Pulcherrima — Forward, expressive</option>
+              <option value="Sulafat">Sulafat — Warm, welcoming</option>
+              <option value="Vindemiatrix">Vindemiatrix — Gentle, kind</option>
+              <option value="Zephyr">Zephyr — Bright, cheerful</option>
+            </optgroup>
+            <optgroup label="Male voices">
+              <option value="Achird">Achird — Friendly, approachable</option>
+              <option value="Algenib">Algenib — Gravelly texture</option>
+              <option value="Algieba">Algieba — Smooth, pleasant</option>
+              <option value="Alnilam">Alnilam — Firm, strong</option>
+              <option value="Charon">Charon — Informative, clear</option>
+              <option value="Enceladus">Enceladus — Breathy, soft</option>
+              <option value="Fenrir">Fenrir — Excitable, dynamic</option>
+              <option value="Iapetus">Iapetus — Clear, articulate</option>
+              <option value="Orus">Orus — Firm, decisive</option>
+              <option value="Puck">Puck — Upbeat, energetic</option>
+              <option value="Rasalgethi">Rasalgethi — Informative, professional</option>
+              <option value="Sadachbia">Sadachbia — Lively, animated</option>
+              <option value="Sadaltager">Sadaltager — Knowledgeable, authoritative</option>
+              <option value="Schedar">Schedar — Even, balanced</option>
+              <option value="Umbriel">Umbriel — Easy-going, calm</option>
+              <option value="Zubenelgenubi">Zubenelgenubi — Casual, conversational</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+
+      <p class="note" style="margin-top:12px">
+        In two-speaker mode, label each line with the speaker's name followed by a colon:<br>
+        <code style="font-size:.8rem;color:#2dc98a">Alex: Hello! Jordan: Hey, great to be here.</code>
+      </p>
+    </div>
+  </div>
+
+  <!-- Script -->
+  <div class="card">
+    <h2>Script</h2>
+
+    <div class="field" style="margin-bottom:16px">
+      <label for="style-prompt">Style direction <span style="color:#444;font-size:.75rem;font-weight:400;text-transform:none;letter-spacing:0">optional</span></label>
+      <input type="text" id="style-prompt"
+        placeholder="e.g. Speak warmly and clearly, like a podcast narrator. Pause slightly after each sentence." />
+      <p class="note">Tell the model how to deliver the speech — tone, pace, mood. All prosody is controlled through natural language here.</p>
+    </div>
+
+    <div class="field">
+      <label for="script-text">Script <span style="color:#2dc98a;font-size:.72rem;font-weight:600;margin-left:4px">required</span></label>
+      <textarea id="script-text" rows="8"
+        placeholder="Type or paste the text you want converted to speech…&#10;&#10;You can include emotion tags like [excited] or [whispering] directly in the text."></textarea>
+      <div class="char-counter">
+        <p class="note">~90 seconds max. Use emotion tags and SSML for fine control (see Advanced options).</p>
+        <span class="char-count" id="char-count">0</span>
+      </div>
+    </div>
+
+    <details style="margin-top:8px">
+      <summary>Advanced options &amp; expression guide</summary>
+      <div class="inner">
+
+        <div class="field">
+          <label for="model-select">Model</label>
+          <select id="model-select">
+            <option value="gemini-2.5-flash-preview-tts" selected>gemini-2.5-flash-preview-tts — Flash (fast, recommended)</option>
+            <option value="gemini-2.5-pro-preview-tts">gemini-2.5-pro-preview-tts — Pro (higher quality, requires billing)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="margin-bottom:8px;display:block">Emotion tags — click to insert at cursor</label>
+          <div class="tag-grid" id="emotion-tags">
+            <span class="tag-chip">[excited]</span>
+            <span class="tag-chip">[sad]</span>
+            <span class="tag-chip">[angry]</span>
+            <span class="tag-chip">[whispering]</span>
+            <span class="tag-chip">[laughing]</span>
+            <span class="tag-chip">[shouting]</span>
+            <span class="tag-chip">[sighing]</span>
+            <span class="tag-chip">[empathetic]</span>
+            <span class="tag-chip">[sarcastic]</span>
+            <span class="tag-chip">[serious]</span>
+            <span class="tag-chip">[warm]</span>
+            <span class="tag-chip">[nervous]</span>
+            <span class="tag-chip">[cheerful]</span>
+            <span class="tag-chip">[calm]</span>
+          </div>
+        </div>
+
+        <div>
+          <label style="margin-bottom:8px;display:block">SSML snippets — click to insert</label>
+          <div class="ssml-grid" id="ssml-tags">
+            <div class="ssml-row" data-insert='&lt;break time="1s"/&gt;'>
+              <span class="ssml-code">&lt;break time="1s"/&gt;</span>
+              <span class="ssml-desc">Pause 1 second</span>
+            </div>
+            <div class="ssml-row" data-insert='&lt;emphasis level="strong"&gt;word&lt;/emphasis&gt;'>
+              <span class="ssml-code">&lt;emphasis level="strong"&gt;word&lt;/emphasis&gt;</span>
+              <span class="ssml-desc">Stress a word</span>
+            </div>
+            <div class="ssml-row" data-insert='&lt;prosody rate="slow"&gt;text&lt;/prosody&gt;'>
+              <span class="ssml-code">&lt;prosody rate="slow"&gt;text&lt;/prosody&gt;</span>
+              <span class="ssml-desc">Slow down a section</span>
+            </div>
+            <div class="ssml-row" data-insert='&lt;prosody rate="fast"&gt;text&lt;/prosody&gt;'>
+              <span class="ssml-code">&lt;prosody rate="fast"&gt;text&lt;/prosody&gt;</span>
+              <span class="ssml-desc">Speed up a section</span>
+            </div>
+            <div class="ssml-row" data-insert='&lt;say-as interpret-as="characters"&gt;NASA&lt;/say-as&gt;'>
+              <span class="ssml-code">&lt;say-as interpret-as="characters"&gt;…&lt;/say-as&gt;</span>
+              <span class="ssml-desc">Spell out acronym</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </details>
+  </div>
+
+  <button class="btn-primary" id="generate-btn">Generate Voiceover</button>
+
+  <div class="error-box" id="error-box"><strong>Error:</strong> <span id="error-msg"></span></div>
+
+  <div id="status-area">
+    <div class="status-box">
+      <div class="status-label">Status</div>
+      <div class="status-text"><span class="spinner"></span> Generating voiceover…</div>
+    </div>
+  </div>
+
+  <div id="result-area" class="card">
+    <h2>Generated Voiceover</h2>
+    <div class="audio-player-wrap">
+      <audio id="audio-player" controls></audio>
+      <div class="result-actions">
+        <a id="download-link" class="btn-secondary" download="voiceover.wav">Download WAV</a>
+        <button class="btn-secondary" id="new-btn">Generate another</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+  // Auth guard
+  const token = sessionStorage.getItem('access_token');
+  if (!token) window.location.href = '/';
+
+  // User info & sign out
+  function getEmail() {
+    const t = sessionStorage.getItem('id_token');
+    if (!t) return null;
+    try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email || null; }
+    catch { return null; }
+  }
+  document.getElementById('user-email').textContent = getEmail() || 'Signed in';
+  document.getElementById('sign-out-btn').addEventListener('click', () => { sessionStorage.clear(); window.location.href = '/'; });
+
+  // ── Speaker mode toggle ────────────────────────────────────────────────────
+
+  let speakerMode = 'single';
+  const singleBtn   = document.getElementById('mode-single');
+  const multiBtn    = document.getElementById('mode-multi');
+  const singleCfg   = document.getElementById('single-config');
+  const multiCfg    = document.getElementById('multi-config');
+  const scriptArea  = document.getElementById('script-text');
+
+  function setSpeakerMode(mode) {
+    speakerMode = mode;
+    if (mode === 'single') {
+      singleBtn.classList.add('active'); multiBtn.classList.remove('active');
+      singleCfg.style.display = ''; multiCfg.style.display = 'none';
+      if (scriptArea.dataset.wasMulti) {
+        scriptArea.placeholder = 'Type or paste the text you want converted to speech…\n\nYou can include emotion tags like [excited] or [whispering] directly in the text.';
+        delete scriptArea.dataset.wasMulti;
+      }
+    } else {
+      multiBtn.classList.add('active'); singleBtn.classList.remove('active');
+      multiCfg.style.display = ''; singleCfg.style.display = 'none';
+      scriptArea.placeholder = 'Alex: Hello, welcome to the show!\nJordan: [excited] Thanks for having me, I\'m thrilled to be here!\nAlex: Let\'s dive right in…';
+      scriptArea.dataset.wasMulti = '1';
+    }
+  }
+
+  singleBtn.addEventListener('click', () => setSpeakerMode('single'));
+  multiBtn.addEventListener('click',  () => setSpeakerMode('multi'));
+
+  // ── Character counter ──────────────────────────────────────────────────────
+
+  const charCount = document.getElementById('char-count');
+  const SOFT_LIMIT = 2000;
+  const HARD_LIMIT = 4000;
+
+  scriptArea.addEventListener('input', () => {
+    const len = scriptArea.value.length;
+    charCount.textContent = len.toLocaleString();
+    charCount.className = 'char-count' + (len > HARD_LIMIT ? ' error' : len > SOFT_LIMIT ? ' warn' : '');
+  });
+
+  // ── Emotion tag & SSML insertion ───────────────────────────────────────────
+
+  function insertAtCursor(field, text) {
+    const start = field.selectionStart;
+    const end   = field.selectionEnd;
+    field.value = field.value.slice(0, start) + text + field.value.slice(end);
+    field.selectionStart = field.selectionEnd = start + text.length;
+    field.focus();
+    field.dispatchEvent(new Event('input'));
+  }
+
+  document.getElementById('emotion-tags').addEventListener('click', e => {
+    const chip = e.target.closest('.tag-chip');
+    if (chip) insertAtCursor(scriptArea, chip.textContent + ' ');
+  });
+
+  document.getElementById('ssml-tags').addEventListener('click', e => {
+    const row = e.target.closest('.ssml-row');
+    if (row) insertAtCursor(scriptArea, row.dataset.insert);
+  });
+
+  // ── Generation ─────────────────────────────────────────────────────────────
+
+  const generateBtn = document.getElementById('generate-btn');
+  const statusArea  = document.getElementById('status-area');
+  const resultArea  = document.getElementById('result-area');
+  const audioPlayer = document.getElementById('audio-player');
+  const downloadLink= document.getElementById('download-link');
+  const errorBox    = document.getElementById('error-box');
+  const errorMsg    = document.getElementById('error-msg');
+
+  function showError(msg)  { errorBox.classList.add('visible'); errorMsg.textContent = msg; }
+  function clearError()    { errorBox.classList.remove('visible'); errorMsg.textContent = ''; }
+
+  generateBtn.addEventListener('click', async () => {
+    clearError();
+    resultArea.classList.remove('visible');
+
+    const text        = scriptArea.value.trim();
+    const stylePrompt = document.getElementById('style-prompt').value.trim();
+    const model       = document.getElementById('model-select').value;
+    const voice       = document.getElementById('voice').value;
+    const voice2      = document.getElementById('voice2').value;
+    const speaker1Name= document.getElementById('speaker1-name').value.trim() || 'Speaker1';
+    const speaker2Name= document.getElementById('speaker2-name').value.trim() || 'Speaker2';
+
+    if (!text) { showError('Please enter a script.'); return; }
+    if (text.length > HARD_LIMIT) { showError(`Script is too long (${text.length} chars). Keep it under ${HARD_LIMIT} characters for reliable results.`); return; }
+
+    generateBtn.disabled = true;
+    statusArea.classList.add('visible');
+
+    try {
+      const res = await fetch('/api/tts', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          text, stylePrompt, model,
+          mode:  speakerMode,
+          voice, voice2, speaker1Name, speaker2Name,
+        }),
+      });
+
+      if (!res.ok) {
+        // Try to parse JSON error body
+        let errMsg = `Request failed (${res.status})`;
+        try { const j = await res.json(); errMsg = j.error || errMsg; } catch {}
+        throw new Error(errMsg);
+      }
+
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+
+      audioPlayer.src = url;
+      audioPlayer.play();
+      downloadLink.href = url;
+
+      statusArea.classList.remove('visible');
+      resultArea.classList.add('visible');
+
+    } catch (err) {
+      showError(err.message);
+      statusArea.classList.remove('visible');
+    }
+
+    generateBtn.disabled = false;
+  });
+
+  document.getElementById('new-btn').addEventListener('click', () => {
+    resultArea.classList.remove('visible');
+    audioPlayer.pause();
+    audioPlayer.src = '';
+    clearError();
+    scriptArea.focus();
+  });
+</script>
+</body>
+</html>

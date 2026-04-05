@@ -27,7 +27,7 @@ module.exports = async function handler(req, res) {
     length        = 'Medium (3–5 min)',
     format        = 'Single Narrator',
     language      = 'English',
-    model         = 'gemini-2.5-pro-preview',
+    model         = 'gemini-2.5-pro',
   } = req.body;
 
   if (!prompt || !prompt.trim()) {

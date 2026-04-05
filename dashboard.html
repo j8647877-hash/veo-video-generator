@@ -154,16 +154,18 @@
       flex-shrink: 0;
     }
 
-    .tool-icon.video { background: linear-gradient(135deg, #7c6af730, #4db6ff20); }
-    .tool-icon.image { background: linear-gradient(135deg, #f7896a30, #ffd04b20); }
+    .tool-icon.video  { background: linear-gradient(135deg, #7c6af730, #4db6ff20); }
+    .tool-icon.image  { background: linear-gradient(135deg, #f7896a30, #ffd04b20); }
     .tool-icon.tts    { background: linear-gradient(135deg, #2dc98a30, #00b4d820); }
     .tool-icon.script { background: linear-gradient(135deg, #a78bfa30, #f472b620); }
+    .tool-icon.agent  { background: linear-gradient(135deg, #f5a62330, #ff6b3520); }
 
     .tool-icon svg { width: 26px; height: 26px; }
     .tool-icon.video  svg { stroke: #7c6af7; }
     .tool-icon.image  svg { stroke: #f7896a; }
     .tool-icon.tts    svg { stroke: #2dc98a; }
     .tool-icon.script svg { stroke: #a78bfa; }
+    .tool-icon.agent  svg { stroke: #f5a623; }
 
     .tool-body { flex: 1; }
 
@@ -279,6 +281,23 @@
       </div>
       <div class="tool-footer">
         <span class="tool-tag">Gemini 2.5 Pro</span>
+        <span class="tool-arrow">→</span>
+      </div>
+    </a>
+
+    <a href="/agent" class="tool-card">
+      <div class="tool-icon agent">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polygon points="10 8 16 12 10 16 10 8"/>
+        </svg>
+      </div>
+      <div class="tool-body">
+        <h2>Production Agent</h2>
+        <p>Describe a topic and let the agent write the script, generate all asset prompts, and guide you through full production.</p>
+      </div>
+      <div class="tool-footer">
+        <span class="tool-tag">Gemini 3.1 Pro</span>
         <span class="tool-arrow">→</span>
       </div>
     </a>

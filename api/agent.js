@@ -1,11 +1,11 @@
-// POST /api/agent — Generates a structured video production plan using Gemini 3.1 Pro.
-// Uses the Gemini API with JSON structured output (responseSchema) for guaranteed plan format.
+// POST /api/agent — Generates a structured video production plan using Gemini 3.1 Pro via Vertex AI.
+// Uses the same OAuth token auth pattern as the script, image, and video tools.
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     return res.status(204).end();
   }
 
@@ -13,13 +13,15 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY is not configured in environment variables.' });
+  const authHeader = req.headers['authorization'];
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Missing Authorization header. Please sign in.' });
   }
 
   const {
     topic,
+    projectId,
+    location       = 'us-central1',
     mode           = 'mix',   // 'images' | 'mix' | 'videos'
     sceneCount     = 5,
     style          = 'Cinematic',
@@ -27,6 +29,10 @@ module.exports = async function handler(req, res) {
     context        = '',
     model          = 'gemini-3.1-pro-preview',
   } = req.body;
+
+  if (!projectId) {
+    return res.status(400).json({ error: 'projectId is required.' });
+  }
 
   if (!topic || !topic.trim()) {
     return res.status(400).json({ error: 'topic is required.' });
@@ -95,26 +101,25 @@ Generate the complete production plan now.`;
     required: ['title', 'description', 'totalEstimatedDuration', 'scenes'],
   };
 
+  const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
+
   let upstream;
   try {
-    upstream = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            responseSchema,
-            temperature:      0.85,
-            maxOutputTokens:  8192,
-          },
-        }),
-      }
-    );
+    upstream = await fetch(endpoint, {
+      method:  'POST',
+      headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema,
+          temperature:      0.85,
+          maxOutputTokens:  8192,
+        },
+      }),
+    });
   } catch (err) {
-    return res.status(500).json({ error: `Network error reaching Gemini API: ${err.message}` });
+    return res.status(500).json({ error: `Network error reaching Vertex AI: ${err.message}` });
   }
 
   const data = await upstream.json();

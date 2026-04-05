@@ -650,9 +650,10 @@
     try {
       const res = await fetch('/api/agent', {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           topic,
+          projectId,
           mode:          selectedMode,
           sceneCount:    parseInt(document.getElementById('scene-count').value),
           style:         document.getElementById('style').value,
@@ -661,6 +662,7 @@
         }),
       });
 
+      if (res.status === 401) { sessionStorage.clear(); window.location.href = '/'; return; }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
 

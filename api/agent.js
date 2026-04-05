@@ -27,7 +27,7 @@ module.exports = async function handler(req, res) {
     style          = 'Cinematic',
     targetDuration = 60,
     context        = '',
-    model          = 'gemini-3.1-pro',
+    model          = 'gemini-2.5-pro',
   } = req.body;
 
   if (!projectId) {

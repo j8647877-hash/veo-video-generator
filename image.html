@@ -754,7 +754,10 @@
 
       const data = await res.json();
 
-      if (res.status === 401) { sessionStorage.clear(); window.location.href = '/'; return; }
+      if (res.status === 401 || (data.error?.status === 'UNAUTHENTICATED') ||
+          (data.error?.message || '').toLowerCase().includes('credentials')) {
+        sessionStorage.clear(); window.location.href = '/'; return;
+      }
       if (!res.ok || data.error) {
         throw new Error(data.error?.message || `API error ${res.status}`);
       }

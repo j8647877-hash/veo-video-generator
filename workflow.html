@@ -158,8 +158,8 @@
        PHASE 1 — Script
     ══════════════════════════════════ */
     #phase1 { display:flex;flex-direction:column;gap:24px; }
-    #phase2, #phase3 { display:none; flex-direction:column; gap:24px; }
-    #phase2.active, #phase3.active { display:flex; }
+    #phase2, #phase3, #phase4 { display:none; flex-direction:column; gap:24px; }
+    #phase2.active, #phase3.active, #phase4.active { display:flex; }
 
     #script-output-display {
       background:#111118;border:1px solid #2e2e42;border-radius:10px;
@@ -275,6 +275,19 @@
     .export-card h2 { font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#666;margin-bottom:16px; }
     .export-btns { display:flex;gap:12px;flex-wrap:wrap; }
 
+    /* ── Remotion Phase 4 ── */
+    .remotion-card { background:#1a1a24;border:1px solid #2a2a3a;border-radius:14px;padding:24px; }
+    .remotion-card h2 { font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#666;margin-bottom:16px; }
+    .remotion-scene-row { display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1a1a2a; }
+    .remotion-scene-row:last-child { border-bottom:none; }
+    .remotion-badge { font-size:.7rem;padding:2px 7px;border-radius:4px;font-weight:600; }
+    .remotion-badge.ok  { background:#0d2e1a;color:#4caf6e;border:1px solid #1a5c32; }
+    .remotion-badge.off { background:#1a1a2a;color:#444;border:1px solid #2a2a3a; }
+    .remotion-instructions ol { padding-left:20px;font-size:.88rem;color:#aaa;line-height:2.1; }
+    .remotion-instructions code { background:#111118;border:1px solid #2e2e42;border-radius:4px;padding:1px 7px;font-size:.82rem;color:#a78bfa; }
+    .remotion-instructions .cmd  { color:#4caf6e; }
+    .remotion-cta { margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center; }
+
     @media (max-width:600px) { .grid-2 { grid-template-columns:1fr; } .phase1-actions,.review-actions { flex-direction:column; } }
   </style>
 </head>
@@ -304,6 +317,8 @@
     <div class="step" id="step2"><span class="step-num">2</span> Review Scenes</div>
     <div class="step-sep"></div>
     <div class="step" id="step3"><span class="step-num">3</span> Asset Studio</div>
+    <div class="step-sep"></div>
+    <div class="step" id="step4"><span class="step-num">4</span> Render</div>
   </div>
 
   <!-- ══════════════════════════════════
@@ -471,6 +486,46 @@
         <button class="btn-secondary" id="dl-vid-btn">Download All Videos</button>
         <button class="btn-secondary" id="dl-zip-btn">Download ZIP (All Assets)</button>
       </div>
+      <div style="margin-top:20px;padding-top:20px;border-top:1px solid #2a2a3a">
+        <button class="btn-primary" id="go-render-btn">Assemble Video with Remotion →</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════
+       PHASE 4 — Remotion Render
+  ══════════════════════════════════ -->
+  <div id="phase4">
+
+    <div class="remotion-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
+        <h2 style="margin-bottom:0">Remotion Video Assembly</h2>
+        <button class="btn-sm" id="back-to-studio-btn">← Back to Asset Studio</button>
+      </div>
+      <p style="font-size:.82rem;color:#555;margin-bottom:20px;line-height:1.6">
+        Your scenes will be packaged into a <strong style="color:#a78bfa">Remotion</strong> React project.
+        Download it, run two commands, and get your final <code style="background:#111118;border:1px solid #2e2e42;border-radius:4px;padding:1px 6px;font-size:.8rem;color:#4caf6e">output.mp4</code>.
+      </p>
+      <div id="remotion-summary"></div>
+      <div class="remotion-cta">
+        <button class="btn-primary" id="remotion-download-btn" style="width:auto;padding:12px 28px">⬇ Download Remotion Project</button>
+        <span id="remotion-dl-status" style="font-size:.82rem;color:#a78bfa"></span>
+      </div>
+    </div>
+
+    <div class="remotion-card remotion-instructions">
+      <h2>How to Render Your Video</h2>
+      <ol>
+        <li>Unzip <code>remotion-video-project.zip</code> and open a terminal inside it</li>
+        <li>Install dependencies: <code class="cmd">npm install</code></li>
+        <li>Render to MP4: <code class="cmd">npm run render</code></li>
+        <li>Your video is at <code>output.mp4</code> 🎬</li>
+      </ol>
+      <p style="font-size:.78rem;color:#555;margin-top:14px">
+        <strong style="color:#a78bfa">Preview first?</strong> Run <code>npm start</code> to open Remotion Studio at <code>localhost:3000</code> — scrub through frames before committing to a full render.
+      </p>
+      <p style="font-size:.78rem;color:#555;margin-top:8px">Requires Node.js 18+. All other dependencies install automatically.</p>
     </div>
 
   </div>
@@ -638,7 +693,7 @@
 
   // ── Stepper ───────────────────────────────────────────────────────────────
   function setStep(n) {
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 4; i++) {
       const el = document.getElementById(`step${i}`);
       el.classList.remove('active','done');
       if (i < n) el.classList.add('done');
@@ -647,6 +702,7 @@
     document.getElementById('phase1').style.display = n === 1 ? 'flex' : 'none';
     document.getElementById('phase2').style.display = n === 2 ? 'flex' : 'none';
     document.getElementById('phase3').style.display = n === 3 ? 'flex' : 'none';
+    document.getElementById('phase4').style.display = n === 4 ? 'flex' : 'none';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -963,7 +1019,7 @@
       const dataUrl  = `data:${mimeType};base64,${imgData.data}`;
       const blob     = base64ToBlob(imgData.data, mimeType);
       if (!studioAssets[i]) studioAssets[i] = {};
-      studioAssets[i].img = { blob, url: dataUrl };
+      studioAssets[i].img = { blob, url: dataUrl, ext };
       const ext = mimeType.includes('jpeg') ? 'jpg' : 'png';
       document.getElementById(`wf-imgpreview-${i}`).innerHTML =
         `<img src="${dataUrl}" alt="Scene ${wfScenes[i].sceneNumber}">
@@ -1099,6 +1155,239 @@
   document.getElementById('dl-img-btn').addEventListener('click', () => downloadByType('img', 'png'));
   document.getElementById('dl-vid-btn').addEventListener('click', () => downloadByType('vid', 'mp4'));
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // PHASE 4 — Remotion Render
+  // ══════════════════════════════════════════════════════════════════════════
+
+  document.getElementById('go-render-btn').addEventListener('click', () => {
+    buildRemotionSummary();
+    setStep(4);
+  });
+
+  document.getElementById('back-to-studio-btn').addEventListener('click', () => setStep(3));
+
+  document.getElementById('remotion-download-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('remotion-download-btn');
+    const status = document.getElementById('remotion-dl-status');
+    btn.disabled = true; btn.textContent = 'Building project…';
+    status.textContent = '';
+    try {
+      await generateRemotionProject();
+      status.textContent = 'Project downloaded! Follow the steps below to render.';
+    } catch (err) {
+      status.style.color = '#f08090';
+      status.textContent = 'Error: ' + err.message;
+    } finally {
+      btn.disabled = false; btn.textContent = '⬇ Download Remotion Project';
+    }
+  });
+
+  function buildRemotionSummary() {
+    const el = document.getElementById('remotion-summary');
+    if (!el) return;
+    let totalDur = 0;
+    const rows = wfScenes.map((s, i) => {
+      const a = studioAssets[i] || {};
+      totalDur += (s.duration || 0);
+      const voBadge  = a.vo?.blob  ? '<span class="remotion-badge ok">Audio</span>'  : '<span class="remotion-badge off">Audio</span>';
+      const imgBadge = a.img?.blob ? '<span class="remotion-badge ok">Image</span>'  : '<span class="remotion-badge off">Image</span>';
+      const vidBadge = a.vid?.blob ? '<span class="remotion-badge ok">Video</span>'  : '<span class="remotion-badge off">Video</span>';
+      return `<div class="remotion-scene-row">
+        <span style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#f472b6);color:#fff;font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${s.sceneNumber}</span>
+        <span style="flex:1;font-size:.85rem;color:#e8e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(s.sceneTitle || 'Scene ' + s.sceneNumber)}</span>
+        <span style="font-size:.72rem;color:#a78bfa;flex-shrink:0">${s.duration}s</span>
+        <span style="display:flex;gap:4px;flex-shrink:0">${voBadge}${imgBadge}${vidBadge}</span>
+      </div>`;
+    });
+    el.innerHTML = rows.join('') +
+      `<div style="display:flex;justify-content:flex-end;padding-top:10px;font-size:.82rem;color:#888">
+         Total duration: <strong style="color:#e8e8f0;margin-left:6px">${totalDur}s</strong>
+       </div>`;
+  }
+
+  async function generateRemotionProject() {
+    // Load JSZip on demand
+    if (!window.JSZip) {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/jszip@3/dist/jszip.min.js';
+        s.onload = res; s.onerror = () => rej(new Error('Failed to load JSZip'));
+        document.head.appendChild(s);
+      });
+    }
+
+    const FPS    = 30;
+    const WIDTH  = 1920;
+    const HEIGHT = 1080;
+
+    // Build serialisable scene manifest
+    const sceneManifest = wfScenes.map((s, i) => {
+      const a = studioAssets[i] || {};
+      return {
+        sceneNumber : s.sceneNumber,
+        title       : s.sceneTitle || `Scene ${s.sceneNumber}`,
+        duration    : s.duration   || 5,
+        hasAudio    : !!(a.vo?.blob),
+        hasImage    : !!(a.img?.blob),
+        hasVideo    : !!(a.vid?.blob),
+        imageExt    : a.img?.ext || 'png',
+      };
+    });
+
+    const totalSeconds = sceneManifest.reduce((sum, s) => sum + s.duration, 0);
+    const totalFrames  = Math.ceil(totalSeconds * FPS);
+
+    // ── src/Composition.jsx ──────────────────────────────────────────────────
+    const compositionJsx = `import { AbsoluteFill, Sequence, Img, Audio, OffthreadVideo, staticFile } from 'remotion';
+
+export const FPS    = ${FPS};
+export const WIDTH  = ${WIDTH};
+export const HEIGHT = ${HEIGHT};
+
+// Scene manifest — auto-generated from AI Studio
+export const scenes = ${JSON.stringify(sceneManifest, null, 2)};
+
+export const VideoComposition = () => {
+  let offset = 0;
+  return (
+    <AbsoluteFill style={{ backgroundColor: '#000000' }}>
+      {scenes.map((scene, i) => {
+        const fromFrame = Math.round(offset * FPS);
+        const durFrames = Math.round(scene.duration * FPS);
+        offset += scene.duration;
+        return (
+          <Sequence key={i} from={fromFrame} durationInFrames={durFrames}>
+            <AbsoluteFill>
+              {scene.hasVideo ? (
+                <OffthreadVideo
+                  src={staticFile(\`scene-\${scene.sceneNumber}-video.mp4\`)}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : scene.hasImage ? (
+                <Img
+                  src={staticFile(\`scene-\${scene.sceneNumber}-image.\${scene.imageExt}\`)}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <AbsoluteFill style={{ backgroundColor: '#1a1a2e' }} />
+              )}
+              {scene.hasAudio && (
+                <Audio src={staticFile(\`scene-\${scene.sceneNumber}-audio.wav\`)} />
+              )}
+            </AbsoluteFill>
+          </Sequence>
+        );
+      })}
+    </AbsoluteFill>
+  );
+};
+`;
+
+    // ── src/Root.jsx ─────────────────────────────────────────────────────────
+    const rootJsx = `import { Composition } from 'remotion';
+import { VideoComposition, FPS, WIDTH, HEIGHT, scenes } from './Composition.jsx';
+
+const totalSeconds = scenes.reduce((sum, s) => sum + s.duration, 0);
+
+export const RemotionRoot = () => (
+  <Composition
+    id="VideoComposition"
+    component={VideoComposition}
+    durationInFrames={Math.ceil(totalSeconds * FPS)}
+    fps={FPS}
+    width={WIDTH}
+    height={HEIGHT}
+  />
+);
+`;
+
+    // ── src/index.jsx ────────────────────────────────────────────────────────
+    const indexJsx = `import { registerRoot } from 'remotion';
+import { RemotionRoot } from './Root.jsx';
+
+registerRoot(RemotionRoot);
+`;
+
+    // ── package.json ─────────────────────────────────────────────────────────
+    const packageJson = JSON.stringify({
+      name   : 'ai-studio-video',
+      version: '1.0.0',
+      scripts: {
+        start : 'remotion studio',
+        render: 'remotion render src/index.jsx VideoComposition output.mp4',
+      },
+      dependencies: {
+        react           : '^19.0.0',
+        'react-dom'     : '^19.0.0',
+        remotion        : '^4.0.0',
+        '@remotion/cli' : '^4.0.0',
+      },
+    }, null, 2);
+
+    // ── README.md ────────────────────────────────────────────────────────────
+    const sceneList = sceneManifest
+      .map(s => `${s.sceneNumber}. "${s.title}" — ${s.duration}s${s.hasVideo ? ' [video]' : s.hasImage ? ' [image]' : ''}${s.hasAudio ? ' + voiceover' : ''}`)
+      .join('\n');
+
+    const readmeMd = `# AI Studio — Remotion Video Project
+
+Auto-generated by [AI Studio](https://github.com/aiamplify) from Production Workflow.
+
+## Quick Start
+
+\`\`\`bash
+npm install
+npm run render
+\`\`\`
+
+Your final video is saved to **output.mp4** (${WIDTH}×${HEIGHT}, ${FPS}fps, ~${totalSeconds}s).
+
+## Preview in Remotion Studio
+
+\`\`\`bash
+npm start
+\`\`\`
+
+Open http://localhost:3000 to scrub frames before rendering.
+
+## Scenes (${sceneManifest.length} total)
+
+${sceneList}
+
+## Customise
+
+Edit \`src/Composition.jsx\` to add:
+- Fade/slide transitions between scenes
+- Text overlays or titles
+- Different aspect ratio (update WIDTH/HEIGHT in Composition.jsx and Root.jsx)
+
+## Requirements
+
+- Node.js 18+
+- All other dependencies are installed by \`npm install\`
+`;
+
+    // ── Assemble ZIP ─────────────────────────────────────────────────────────
+    const zip = new JSZip();
+    zip.file('package.json',      packageJson);
+    zip.file('README.md',         readmeMd);
+    zip.file('src/index.jsx',     indexJsx);
+    zip.file('src/Root.jsx',      rootJsx);
+    zip.file('src/Composition.jsx', compositionJsx);
+
+    // Add binary assets to public/
+    wfScenes.forEach((s, i) => {
+      const a = studioAssets[i] || {};
+      const n = s.sceneNumber;
+      if (a.vo?.blob)  zip.file(`public/scene-${n}-audio.wav`,             a.vo.blob);
+      if (a.img?.blob) zip.file(`public/scene-${n}-image.${a.img.ext || 'png'}`, a.img.blob);
+      if (a.vid?.blob) zip.file(`public/scene-${n}-video.mp4`,             a.vid.blob);
+    });
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    triggerDownload(zipBlob, 'remotion-video-project.zip');
+  }
+
   document.getElementById('dl-zip-btn').addEventListener('click', async () => {
     const btn = document.getElementById('dl-zip-btn');
     btn.disabled = true; btn.textContent = 'Building ZIP…';
@@ -1116,7 +1405,7 @@
       wfScenes.forEach((s, i) => {
         const a = studioAssets[i] || {};
         if (a.vo?.blob)  { zip.file(`scene-${s.sceneNumber}-voiceover.wav`, a.vo.blob);  count++; }
-        if (a.img?.blob) { zip.file(`scene-${s.sceneNumber}-image.png`,     a.img.blob); count++; }
+        if (a.img?.blob) { zip.file(`scene-${s.sceneNumber}-image.${a.img.ext || 'png'}`, a.img.blob); count++; }
         if (a.vid?.blob) { zip.file(`scene-${s.sceneNumber}-video.mp4`,     a.vid.blob); count++; }
       });
       if (!count) { alert('No assets generated yet.'); return; }

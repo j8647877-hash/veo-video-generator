@@ -184,6 +184,34 @@
     .tag { display:inline-block;font-size:.72rem;background:#0f2a1e;border:1px solid #1a4a30;border-radius:4px;color:#2dc98a;padding:2px 8px;margin-left:8px;vertical-align:middle;font-weight:600;letter-spacing:.04em; }
 
     @media (max-width:520px) { .field-row { grid-template-columns:1fr; } .speaker-row { grid-template-columns:1fr; } }
+
+    /* ── From Script section ── */
+    .from-script-error { background:#1f0f14;border:1px solid #4a1a28;border-radius:8px;padding:12px 16px;color:#f08090;font-size:.85rem;margin-bottom:12px;display:none; }
+    .from-script-error.visible { display:block; }
+    .scenes-bar { display:flex;align-items:center;justify-content:space-between;margin-bottom:14px; }
+    .scenes-bar-label { font-size:.85rem;color:#aaa; }
+    .btn-create-all-tts { padding:10px 18px;background:linear-gradient(135deg,#2dc98a,#00b4d8);border:none;border-radius:8px;color:#fff;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s; }
+    .btn-create-all-tts:hover:not(:disabled) { opacity:.85; }
+    .btn-create-all-tts:disabled { opacity:.4;cursor:not-allowed; }
+    .tts-scene-card { background:#111118;border:1px solid #2e2e42;border-radius:10px;padding:16px; }
+    .tts-scene-head { display:flex;align-items:center;gap:10px;margin-bottom:12px; }
+    .tts-scene-num { width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#2dc98a,#00b4d8);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;flex-shrink:0; }
+    .tts-scene-title { font-size:.88rem;font-weight:600;flex:1; }
+    .tts-dur-tag { font-size:.7rem;color:#666;background:#1a1a24;border:1px solid #2a2a3a;border-radius:4px;padding:2px 7px; }
+    .tts-prompt-ta { width:100%;background:#0d0d10;border:1px solid #2e2e42;border-radius:8px;color:#e8e8f0;font-size:.85rem;padding:9px 12px;outline:none;resize:vertical;font-family:inherit;min-height:72px;transition:border-color .2s; }
+    .tts-prompt-ta:focus { border-color:#2dc98a; }
+    .tts-card-actions { display:flex;gap:8px;margin-top:10px;flex-wrap:wrap; }
+    .btn-tts-create { padding:8px 16px;background:linear-gradient(135deg,#2dc98a,#00b4d8);border:none;border-radius:7px;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s; }
+    .btn-tts-create:hover:not(:disabled) { opacity:.85; }
+    .btn-tts-create:disabled { opacity:.4;cursor:not-allowed; }
+    .btn-tts-sm { padding:8px 14px;background:#1e2e2a;border:1px solid #2a4a3a;border-radius:7px;color:#c0d8d0;font-size:.82rem;cursor:pointer;font-family:inherit;transition:border-color .2s; }
+    .btn-tts-sm:hover:not(:disabled) { border-color:#2dc98a;color:#e8e8f0; }
+    .btn-tts-sm:disabled { opacity:.35;cursor:not-allowed; }
+    .tts-audio-wrap { margin-top:10px; }
+    .tts-audio-wrap audio { width:100%; }
+    .tts-status-msg { font-size:.78rem;margin-top:8px; }
+    .tts-status-msg.generating { color:#2dc98a; }
+    .tts-status-msg.error { color:#f08090; }
   </style>
 </head>
 <body>
@@ -204,6 +232,25 @@
     <h1>Voiceover</h1>
     <p>Natural-sounding speech with 30 voices via Gemini 2.5 TTS</p>
   </header>
+
+  <!-- ── From Script ── -->
+  <div class="card">
+    <h2>From Script <span style="font-size:.72rem;color:#555;font-weight:400;text-transform:none;letter-spacing:0">— paste a script, get one voiceover per scene</span></h2>
+    <div class="field" style="margin-bottom:14px">
+      <label for="tts-script-input">Video script</label>
+      <textarea id="tts-script-input" rows="7" placeholder="Paste your full video script here. The AI will extract the spoken narration for each scene…"></textarea>
+    </div>
+    <div id="tts-from-script-error" class="from-script-error"></div>
+    <button class="btn-primary" id="tts-analyze-btn" style="margin-bottom:0">Analyze Script</button>
+
+    <div id="tts-scenes-container" style="display:none;margin-top:24px">
+      <div class="scenes-bar">
+        <span class="scenes-bar-label" id="tts-scenes-count-label"></span>
+        <button class="btn-create-all-tts" id="tts-create-all-btn">⚡ Create All Voiceovers</button>
+      </div>
+      <div id="tts-scenes-list" style="display:flex;flex-direction:column;gap:14px"></div>
+    </div>
+  </div>
 
   <!-- Voice configuration -->
   <div class="card">
@@ -622,6 +669,130 @@
     clearError();
     scriptArea.focus();
   });
+
+  // ══════════════════════════════════════════════════════
+  // FROM SCRIPT — analyze script and generate per-scene voiceovers
+  // ══════════════════════════════════════════════════════
+  let ttsScriptScenes = [];
+  const ttsSceneAssets = {}; // key: index → { url }
+  let ttsProjectId = '';
+
+  // Load projectId for script analysis (tts has no project ID field of its own)
+  (async () => {
+    try {
+      const cfg = await (await fetch('/api/config')).json();
+      ttsProjectId = cfg.projectId || '';
+    } catch {}
+  })();
+
+  function showTTSFSError(msg) { const el = document.getElementById('tts-from-script-error'); el.textContent = msg; el.classList.add('visible'); }
+  function hideTTSFSError()    { document.getElementById('tts-from-script-error').classList.remove('visible'); }
+
+  document.getElementById('tts-analyze-btn').addEventListener('click', async () => {
+    const script = document.getElementById('tts-script-input').value.trim();
+    if (!script)       { showTTSFSError('Please paste your script first.'); return; }
+    if (!ttsProjectId) { showTTSFSError('No Project ID configured on this server. Contact your administrator.'); return; }
+
+    hideTTSFSError();
+    const btn = document.getElementById('tts-analyze-btn');
+    btn.disabled = true; btn.textContent = 'Analyzing…';
+    document.getElementById('tts-scenes-container').style.display = 'none';
+
+    try {
+      const res  = await fetch('/api/analyze-script', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script, projectId: ttsProjectId }),
+      });
+      if (res.status === 401) { sessionStorage.clear(); window.location.href = '/'; return; }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+      ttsScriptScenes = data.scenes || [];
+      Object.keys(ttsSceneAssets).forEach(k => delete ttsSceneAssets[k]);
+      renderTTSScriptScenes();
+    } catch (err) { showTTSFSError(err.message); }
+
+    btn.disabled = false; btn.textContent = 'Analyze Script';
+  });
+
+  function renderTTSScriptScenes() {
+    const list = document.getElementById('tts-scenes-list');
+    list.innerHTML = '';
+    ttsScriptScenes.forEach((scene, i) => list.appendChild(buildTTSSceneCard(scene, i)));
+    document.getElementById('tts-scenes-count-label').textContent = `${ttsScriptScenes.length} scene${ttsScriptScenes.length !== 1 ? 's' : ''} detected`;
+    document.getElementById('tts-scenes-container').style.display = '';
+  }
+
+  function buildTTSSceneCard(scene, i) {
+    const card = document.createElement('div');
+    card.className = 'tts-scene-card';
+    card.id = `tts-scene-card-${i}`;
+    card.innerHTML = `
+      <div class="tts-scene-head">
+        <span class="tts-scene-num">${String(scene.sceneNumber).padStart(2,'0')}</span>
+        <span class="tts-scene-title">${ttsEscHtml(scene.sceneTitle)}</span>
+        <span class="tts-dur-tag">${scene.duration}s</span>
+      </div>
+      <textarea class="tts-prompt-ta" id="tts-vo-${i}" rows="3">${ttsEscHtml(scene.voiceoverText)}</textarea>
+      <div class="tts-card-actions">
+        <button class="btn-tts-create" id="tts-create-${i}">Create</button>
+        <button class="btn-tts-sm" id="tts-dl-${i}" disabled>Download</button>
+      </div>
+      <div class="tts-audio-wrap" id="tts-audio-wrap-${i}"></div>
+      <div class="tts-status-msg" id="tts-status-${i}"></div>
+    `;
+    card.querySelector(`#tts-create-${i}`).addEventListener('click', () => generateSceneVoiceover(i));
+    card.querySelector(`#tts-dl-${i}`).addEventListener('click', () => {
+      const a = ttsSceneAssets[i];
+      if (a) { const el = Object.assign(document.createElement('a'), { href: a.url, download: `scene-${i+1}-voiceover.wav` }); document.body.appendChild(el); el.click(); document.body.removeChild(el); }
+    });
+    return card;
+  }
+
+  async function generateSceneVoiceover(i) {
+    const scene   = ttsScriptScenes[i];
+    const text    = document.getElementById(`tts-vo-${i}`).value.trim() || scene.voiceoverText;
+    const voice   = document.getElementById('voice').value;
+    const model   = document.getElementById('model-select').value;
+    const style   = document.getElementById('style-prompt').value.trim();
+
+    const createBtn = document.getElementById(`tts-create-${i}`);
+    const statusEl  = document.getElementById(`tts-status-${i}`);
+    createBtn.disabled = true;
+    statusEl.textContent = 'Generating…'; statusEl.className = 'tts-status-msg generating';
+
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice, model, stylePrompt: style, mode: 'single' }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || `TTS error ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      ttsSceneAssets[i] = { url };
+      document.getElementById(`tts-audio-wrap-${i}`).innerHTML = `<audio controls src="${url}" style="width:100%"></audio>`;
+      document.getElementById(`tts-dl-${i}`).disabled = false;
+      statusEl.textContent = ''; statusEl.className = 'tts-status-msg';
+    } catch (err) {
+      statusEl.textContent = err.message; statusEl.className = 'tts-status-msg error';
+    }
+    createBtn.disabled = false;
+  }
+
+  document.getElementById('tts-create-all-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('tts-create-all-btn');
+    btn.disabled = true; btn.textContent = 'Creating…';
+    for (let i = 0; i < ttsScriptScenes.length; i++) await generateSceneVoiceover(i);
+    btn.disabled = false; btn.textContent = '⚡ Create All Voiceovers';
+  });
+
+  function ttsEscHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
 </script>
 </body>
 </html>

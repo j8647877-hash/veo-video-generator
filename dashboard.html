@@ -158,14 +158,16 @@
     .tool-icon.image  { background: linear-gradient(135deg, #f7896a30, #ffd04b20); }
     .tool-icon.tts    { background: linear-gradient(135deg, #2dc98a30, #00b4d820); }
     .tool-icon.script { background: linear-gradient(135deg, #a78bfa30, #f472b620); }
-    .tool-icon.agent  { background: linear-gradient(135deg, #f5a62330, #ff6b3520); }
+    .tool-icon.agent    { background: linear-gradient(135deg, #f5a62330, #ff6b3520); }
+    .tool-icon.workflow { background: linear-gradient(135deg, #6ee7f730, #a78bfa20); }
 
     .tool-icon svg { width: 26px; height: 26px; }
-    .tool-icon.video  svg { stroke: #7c6af7; }
-    .tool-icon.image  svg { stroke: #f7896a; }
-    .tool-icon.tts    svg { stroke: #2dc98a; }
-    .tool-icon.script svg { stroke: #a78bfa; }
-    .tool-icon.agent  svg { stroke: #f5a623; }
+    .tool-icon.video    svg { stroke: #7c6af7; }
+    .tool-icon.image    svg { stroke: #f7896a; }
+    .tool-icon.tts      svg { stroke: #2dc98a; }
+    .tool-icon.script   svg { stroke: #a78bfa; }
+    .tool-icon.agent    svg { stroke: #f5a623; }
+    .tool-icon.workflow svg { stroke: #6ee7f7; }
 
     .tool-body { flex: 1; }
 
@@ -298,6 +300,22 @@
       </div>
       <div class="tool-footer">
         <span class="tool-tag">gemini-2.5-pro</span>
+        <span class="tool-arrow">→</span>
+      </div>
+    </a>
+
+    <a href="/workflow" class="tool-card">
+      <div class="tool-icon workflow">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+        </svg>
+      </div>
+      <div class="tool-body">
+        <h2>Production Workflow</h2>
+        <p>Full end-to-end pipeline: write or paste a script, review scenes, then generate voiceovers, images, and videos — all in one place.</p>
+      </div>
+      <div class="tool-footer">
+        <span class="tool-tag">Gemini + Veo + TTS</span>
         <span class="tool-arrow">→</span>
       </div>
     </a>

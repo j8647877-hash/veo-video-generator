@@ -57,12 +57,12 @@
 
     label { display:block;font-size:.85rem;color:#aaa;margin-bottom:6px; }
 
-    input[type="text"], textarea, select {
+    input[type="text"], input[type="number"], textarea, select {
       width:100%;background:#111118;border:1px solid #2e2e42;border-radius:8px;
       color:#e8e8f0;font-size:.95rem;padding:10px 14px;outline:none;
       transition:border-color .2s;font-family:inherit;
     }
-    input[type="text"]:focus, textarea:focus, select:focus { border-color:#a78bfa; }
+    input[type="text"]:focus, input[type="number"]:focus, textarea:focus, select:focus { border-color:#a78bfa; }
     textarea { resize:vertical; }
 
     .grid-2 { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
@@ -286,6 +286,26 @@
       </div>
     </div>
 
+    <div class="grid-2" style="margin-top:16px">
+      <div class="field">
+        <label for="scene-count">Scene count (for Workflow)</label>
+        <select id="scene-count">
+          <option value="3">3 scenes</option>
+          <option value="4">4 scenes</option>
+          <option value="5" selected>5 scenes</option>
+          <option value="6">6 scenes</option>
+          <option value="7">7 scenes</option>
+          <option value="8">8 scenes</option>
+          <option value="10">10 scenes</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="scene-duration">Default scene duration (seconds)</label>
+        <input type="number" id="scene-duration" value="10" min="3" max="60" step="1" />
+        <p class="note">Used when sending to Workflow for per-scene asset generation.</p>
+      </div>
+    </div>
+
     <details style="margin-top:16px">
       <summary>Advanced options</summary>
       <div class="inner">
@@ -352,6 +372,7 @@ Avoid: Overly technical jargon. Passive voice. Filler phrases like 'In conclusio
       <div class="result-actions">
         <button class="btn-secondary" id="copy-btn" disabled>Copy</button>
         <button class="btn-secondary" id="download-btn" disabled>Download TXT</button>
+        <button class="btn-secondary" id="workflow-btn" disabled style="background:linear-gradient(135deg,#a78bfa20,#f472b620);border-color:#a78bfa50;color:#a78bfa">Send to Workflow</button>
         <button class="btn-secondary" id="new-btn">Write another</button>
       </div>
     </div>
@@ -430,6 +451,7 @@ Avoid: Overly technical jargon. Passive voice. Filler phrases like 'In conclusio
   const charBadge    = document.getElementById('char-count-badge');
 
   let rawText = '';
+  const workflowBtn = document.getElementById('workflow-btn');
 
   function showError(msg)  { errorBox.classList.add('visible'); errorMsg.textContent = msg; }
   function clearError()    { errorBox.classList.remove('visible'); errorMsg.textContent = ''; }
@@ -520,6 +542,7 @@ Avoid: Overly technical jargon. Passive voice. Filler phrases like 'In conclusio
       updateMeta(rawText);
       copyBtn.disabled = false;
       downloadBtn.disabled = false;
+      workflowBtn.disabled = false;
 
     } catch (err) {
       showError(err.message);
@@ -553,6 +576,14 @@ Avoid: Overly technical jargon. Passive voice. Filler phrases like 'In conclusio
     URL.revokeObjectURL(url);
   });
 
+  // ── Send to Workflow ──────────────────────────────────────────────────────
+  workflowBtn.addEventListener('click', () => {
+    sessionStorage.setItem('workflow_script', rawText);
+    sessionStorage.setItem('workflow_scene_count', document.getElementById('scene-count').value);
+    sessionStorage.setItem('workflow_scene_duration', document.getElementById('scene-duration').value);
+    window.location.href = '/workflow';
+  });
+
   // ── New script ────────────────────────────────────────────────────────────
   document.getElementById('new-btn').addEventListener('click', () => {
     resultArea.classList.remove('visible');
@@ -560,6 +591,7 @@ Avoid: Overly technical jargon. Passive voice. Filler phrases like 'In conclusio
     scriptOutput.innerHTML = '';
     copyBtn.disabled = true;
     downloadBtn.disabled = true;
+    workflowBtn.disabled = true;
     clearError();
     promptArea.focus();
     window.scrollTo({ top: 0, behavior: 'smooth' });

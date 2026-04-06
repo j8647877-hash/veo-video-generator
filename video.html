@@ -301,6 +301,170 @@
     }
 
     @media (max-width: 520px) { .field-row { grid-template-columns: 1fr; } }
+
+    /* ── From Script ── */
+    .from-script-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .from-script-header h2 { margin-bottom: 0; }
+
+    .btn-analyze-vid {
+      padding: 8px 18px;
+      background: linear-gradient(135deg, #7c6af7, #4db6ff);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .btn-analyze-vid:hover:not(:disabled) { opacity: 0.85; }
+    .btn-analyze-vid:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .vid-scenes-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .vid-scenes-label { font-size: 0.82rem; color: #666; }
+
+    .btn-vid-create-all {
+      padding: 7px 16px;
+      background: linear-gradient(135deg, #7c6af720, #4db6ff20);
+      border: 1px solid #7c6af750;
+      border-radius: 7px;
+      color: #7c6af7;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      font-family: inherit;
+    }
+    .btn-vid-create-all:hover:not(:disabled) { background: linear-gradient(135deg, #7c6af730, #4db6ff25); border-color: #7c6af7; }
+    .btn-vid-create-all:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .vid-scene-card {
+      background: #111118;
+      border: 1px solid #2e2e42;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .vid-scene-card-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .vid-scene-num {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7c6af7, #4db6ff);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .vid-scene-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #e8e8f0;
+      flex: 1;
+    }
+
+    .vid-dur-tag {
+      font-size: 0.75rem;
+      background: #1a1a2a;
+      border: 1px solid #3a3060;
+      border-radius: 4px;
+      color: #7c6af7;
+      padding: 2px 8px;
+    }
+
+    .vid-scene-prompt-ta {
+      width: 100%;
+      background: #0f0f18;
+      border: 1px solid #2a2a3a;
+      border-radius: 6px;
+      color: #c8c8e0;
+      font-size: 0.85rem;
+      padding: 8px 12px;
+      resize: vertical;
+      min-height: 70px;
+      outline: none;
+      font-family: inherit;
+      margin-bottom: 10px;
+      transition: border-color 0.2s;
+    }
+    .vid-scene-prompt-ta:focus { border-color: #7c6af7; }
+
+    .vid-scene-card-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-vid-scene-create {
+      padding: 7px 16px;
+      background: linear-gradient(135deg, #7c6af7, #4db6ff);
+      border: none;
+      border-radius: 7px;
+      color: #fff;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      font-family: inherit;
+    }
+    .btn-vid-scene-create:hover:not(:disabled) { opacity: 0.85; }
+    .btn-vid-scene-create:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .vid-scene-preview {
+      margin-top: 10px;
+    }
+    .vid-scene-preview video {
+      width: 100%;
+      border-radius: 7px;
+      background: #000;
+      border: 1px solid #2a2a3a;
+    }
+    .vid-scene-status {
+      font-size: 0.8rem;
+      color: #7c6af7;
+      margin-top: 6px;
+      min-height: 1.2em;
+    }
+    .vid-scene-status.err { color: #f08090; }
+
+    .from-script-error {
+      background: #1f0f14;
+      border: 1px solid #4a1a28;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #f08090;
+      font-size: 0.85rem;
+      margin-top: 12px;
+      display: none;
+    }
+    .from-script-error.visible { display: block; }
   </style>
 </head>
 <body>
@@ -321,6 +485,27 @@
     <h1>Video Generator</h1>
     <p>Generate videos with Veo 3.1 Lite via Google Vertex AI</p>
   </header>
+
+  <!-- From Script -->
+  <div class="card" id="from-script-card">
+    <div class="from-script-header">
+      <h2>From Script</h2>
+      <button class="btn-analyze-vid" id="vid-analyze-btn">Analyze Script</button>
+    </div>
+    <div class="field">
+      <label for="vid-script-input">Paste your video script</label>
+      <textarea id="vid-script-input" style="min-height:120px" placeholder="Paste your full video script here. The AI will break it into scenes and generate a video prompt for each one…"></textarea>
+    </div>
+    <div class="from-script-error" id="vid-script-error"></div>
+
+    <div id="vid-scenes-container" style="display:none; margin-top:20px">
+      <div class="vid-scenes-bar">
+        <span class="vid-scenes-label" id="vid-scenes-label">0 scenes</span>
+        <button class="btn-vid-create-all" id="vid-create-all-btn">Generate All Videos</button>
+      </div>
+      <div id="vid-scenes-list"></div>
+    </div>
+  </div>
 
   <!-- Project -->
   <div class="card">
@@ -610,6 +795,193 @@
     for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
     return new Blob([arr], { type: mimeType });
   }
+
+  // ── From Script ─────────────────────────────────────────────────────────────
+
+  let videoScriptScenes = [];
+  const videoSceneAssets = {}; // { i: { url, blob } }
+
+  function escVidHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function buildVideoSceneCard(scene, i) {
+    const dur = scene.duration ? `${scene.duration}s` : '';
+    return `
+      <div class="vid-scene-card" id="vid-scene-card-${i}">
+        <div class="vid-scene-card-head">
+          <div class="vid-scene-num">${scene.sceneNumber}</div>
+          <div class="vid-scene-title">${escVidHtml(scene.sceneTitle || `Scene ${scene.sceneNumber}`)}</div>
+          ${dur ? `<span class="vid-dur-tag">${escVidHtml(dur)}</span>` : ''}
+        </div>
+        <textarea class="vid-scene-prompt-ta" id="vid-prompt-${i}" rows="3">${escVidHtml(scene.videoPrompt || '')}</textarea>
+        <div class="vid-scene-card-actions">
+          <button class="btn-vid-scene-create" id="vid-btn-${i}" onclick="generateSceneVideo(${i})">Generate Video</button>
+        </div>
+        <div class="vid-scene-preview" id="vid-preview-${i}"></div>
+        <div class="vid-scene-status" id="vid-status-${i}"></div>
+      </div>`;
+  }
+
+  function renderVideoScriptScenes() {
+    const list = document.getElementById('vid-scenes-list');
+    list.innerHTML = videoScriptScenes.map((s, i) => buildVideoSceneCard(s, i)).join('');
+    document.getElementById('vid-scenes-label').textContent =
+      `${videoScriptScenes.length} scene${videoScriptScenes.length !== 1 ? 's' : ''}`;
+    document.getElementById('vid-scenes-container').style.display = '';
+  }
+
+  document.getElementById('vid-analyze-btn').addEventListener('click', async () => {
+    const scriptText = document.getElementById('vid-script-input').value.trim();
+    const errEl = document.getElementById('vid-script-error');
+    errEl.classList.remove('visible');
+
+    if (!scriptText) { errEl.textContent = 'Please paste a script first.'; errEl.classList.add('visible'); return; }
+
+    const projectId = document.getElementById('project-id').value.trim();
+    if (!projectId) { errEl.textContent = 'Please enter your GCP Project ID in the Project card below.'; errEl.classList.add('visible'); return; }
+
+    const btn = document.getElementById('vid-analyze-btn');
+    btn.disabled = true; btn.textContent = 'Analyzing…';
+
+    try {
+      const res = await fetch('/api/analyze-script', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script: scriptText, projectId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Status ${res.status}`);
+      if (!data.scenes || !data.scenes.length) throw new Error('No scenes returned.');
+      videoScriptScenes = data.scenes;
+      renderVideoScriptScenes();
+    } catch (err) {
+      errEl.textContent = err.message; errEl.classList.add('visible');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Analyze Script';
+    }
+  });
+
+  async function generateSceneVideo(i) {
+    const scene = videoScriptScenes[i];
+    const projectId  = document.getElementById('project-id').value.trim();
+    const location   = document.getElementById('location').value;
+    const modelId    = document.getElementById('model-id').value;
+    const gcsUri     = document.getElementById('gcs-uri').value.trim();
+    const prompt     = document.getElementById(`vid-prompt-${i}`).value.trim() || scene.videoPrompt;
+
+    const statusEl = document.getElementById(`vid-status-${i}`);
+    const btn      = document.getElementById(`vid-btn-${i}`);
+    const preview  = document.getElementById(`vid-preview-${i}`);
+
+    if (!projectId) { statusEl.textContent = 'Enter Project ID first.'; statusEl.className = 'vid-scene-status err'; return; }
+    if (!prompt)    { statusEl.textContent = 'Prompt is empty.'; statusEl.className = 'vid-scene-status err'; return; }
+
+    btn.disabled = true;
+    statusEl.className = 'vid-scene-status';
+    statusEl.innerHTML = '<span class="spinner"></span> Submitting…';
+    preview.innerHTML = '';
+
+    const vertexPath = `/v1/projects/${projectId}/locations/${location}/publishers/google/models/${modelId}:predictLongRunning`;
+    const instance = { prompt, aspectRatio: '16:9', duration: '6s' };
+    const parameters = { sampleCount: 1 };
+    if (gcsUri) parameters.storageUri = gcsUri;
+
+    let operationName;
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'X-Vertex-Path': vertexPath },
+        body: JSON.stringify({ instances: [instance], parameters }),
+      });
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data?.error?.message || `API error ${res.status}`);
+      operationName = data.name;
+      if (!operationName) throw new Error('No operation name returned.');
+    } catch (err) {
+      statusEl.textContent = err.message; statusEl.className = 'vid-scene-status err'; btn.disabled = false; return;
+    }
+
+    const maxAttempts = 80, pollInterval = 12000;
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      await sleep(pollInterval);
+      attempts++;
+      statusEl.innerHTML = `<span class="spinner"></span> Generating… (${attempts * 12}s)`;
+
+      let opData;
+      try {
+        const pollRes = await fetch(`/api/poll?operation=${encodeURIComponent(operationName)}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        opData = await safeJson(pollRes);
+        if (!pollRes.ok) throw new Error(opData?.error?.message || `Poll error ${pollRes.status}`);
+      } catch (err) {
+        statusEl.textContent = err.message; statusEl.className = 'vid-scene-status err'; btn.disabled = false; return;
+      }
+
+      if (opData.done) {
+        if (opData.error) {
+          statusEl.textContent = 'Generation failed: ' + (opData.error.message || JSON.stringify(opData.error));
+          statusEl.className = 'vid-scene-status err'; btn.disabled = false; return;
+        }
+
+        const predictions = opData?.response?.predictions || opData?.response?.videos;
+        if (!predictions || !predictions.length) {
+          statusEl.textContent = 'No video in response.'; statusEl.className = 'vid-scene-status err'; btn.disabled = false; return;
+        }
+
+        const pred = predictions[0];
+        const videoBase64 = pred?.bytesBase64Encoded || pred?.videoContent
+          || pred?.generatedSamples?.[0]?.video?.encodedVideo || pred?.generatedSamples?.[0]?.rawContent;
+        const videoGcsUri = pred?.videoUri || pred?.gcsUri || pred?.generatedSamples?.[0]?.videoUri;
+
+        if (videoBase64) {
+          const blob = base64ToBlob(videoBase64, 'video/mp4');
+          const url = URL.createObjectURL(blob);
+          videoSceneAssets[i] = { url, blob };
+          preview.innerHTML = `
+            <video src="${url}" controls playsinline style="width:100%;border-radius:7px;background:#000;border:1px solid #2a2a3a"></video>
+            <div style="margin-top:6px"><a href="${url}" download="scene-${scene.sceneNumber}-video.mp4" class="btn-secondary" style="display:inline-block;padding:6px 14px;font-size:0.8rem">Download MP4</a></div>`;
+          statusEl.textContent = 'Done!'; statusEl.className = 'vid-scene-status';
+
+        } else if (videoGcsUri) {
+          try {
+            const match = videoGcsUri.match(/^gs:\/\/([^/]+)\/(.+)$/);
+            if (!match) throw new Error('Bad GCS URI');
+            const [, bucket, object] = match;
+            const vRes = await fetch(`https://storage.googleapis.com/storage/v1/b/${bucket}/o/${encodeURIComponent(object)}?alt=media`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (!vRes.ok) throw new Error(`GCS ${vRes.status}`);
+            const blob = await vRes.blob();
+            const url = URL.createObjectURL(blob);
+            videoSceneAssets[i] = { url, blob };
+            preview.innerHTML = `
+              <video src="${url}" controls playsinline style="width:100%;border-radius:7px;background:#000;border:1px solid #2a2a3a"></video>
+              <div style="margin-top:6px"><a href="${url}" download="scene-${scene.sceneNumber}-video.mp4" class="btn-secondary" style="display:inline-block;padding:6px 14px;font-size:0.8rem">Download MP4</a></div>`;
+            statusEl.textContent = 'Done!'; statusEl.className = 'vid-scene-status';
+          } catch {
+            preview.innerHTML = `<p style="font-size:0.8rem;color:#aaa;margin-top:6px">Video saved to GCS: <code style="color:#7c6af7">${escVidHtml(videoGcsUri)}</code></p>`;
+            statusEl.textContent = 'Saved to GCS.'; statusEl.className = 'vid-scene-status';
+          }
+        } else {
+          statusEl.textContent = 'Unexpected response format.'; statusEl.className = 'vid-scene-status err';
+        }
+
+        btn.disabled = false; return;
+      }
+    }
+
+    statusEl.textContent = 'Timed out after ~16 min. Operation may still be running.';
+    statusEl.className = 'vid-scene-status err'; btn.disabled = false;
+  }
+
+  document.getElementById('vid-create-all-btn').addEventListener('click', async () => {
+    const allBtn = document.getElementById('vid-create-all-btn');
+    allBtn.disabled = true; allBtn.textContent = 'Generating…';
+    for (let i = 0; i < videoScriptScenes.length; i++) {
+      await generateSceneVideo(i);
+    }
+    allBtn.disabled = false; allBtn.textContent = 'Generate All Videos';
+  });
 </script>
 </body>
 </html>

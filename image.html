@@ -434,6 +434,37 @@
       .field-row, .field-row-3 { grid-template-columns: 1fr; }
       .images-grid { grid-template-columns: 1fr; }
     }
+
+    /* ── From Script section ── */
+    .from-script-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:16px; }
+    .from-script-header h2 { margin-bottom:0; }
+    .from-script-sub { font-size:.75rem;color:#555;font-weight:400;text-transform:none;letter-spacing:0; }
+    .scene-card { background:#111118;border:1px solid #2e2e42;border-radius:10px;padding:16px; }
+    .scene-card-head { display:flex;align-items:center;gap:10px;margin-bottom:12px; }
+    .scene-num-dot { width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#f7896a,#ffd04b);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#1a0a00;flex-shrink:0; }
+    .scene-card-title { font-size:.88rem;font-weight:600;flex:1; }
+    .scene-dur-tag { font-size:.7rem;color:#666;background:#1a1a24;border:1px solid #2a2a3a;border-radius:4px;padding:2px 7px; }
+    .scene-prompt-ta { width:100%;background:#0d0d10;border:1px solid #2e2e42;border-radius:8px;color:#e8e8f0;font-size:.85rem;padding:9px 12px;outline:none;resize:vertical;font-family:inherit;min-height:72px;transition:border-color .2s; }
+    .scene-prompt-ta:focus { border-color:#f7896a; }
+    .scene-card-actions { display:flex;gap:8px;margin-top:10px;flex-wrap:wrap; }
+    .btn-scene-create { padding:8px 16px;background:linear-gradient(135deg,#f7896a,#ffd04b);border:none;border-radius:7px;color:#1a0a00;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s; }
+    .btn-scene-create:hover:not(:disabled) { opacity:.85; }
+    .btn-scene-create:disabled { opacity:.4;cursor:not-allowed; }
+    .btn-scene-sm { padding:8px 14px;background:#1e1e2e;border:1px solid #3a3a54;border-radius:7px;color:#c0c0d8;font-size:.82rem;cursor:pointer;font-family:inherit;transition:border-color .2s; }
+    .btn-scene-sm:hover:not(:disabled) { border-color:#f7896a;color:#e8e8f0; }
+    .btn-scene-sm:disabled { opacity:.35;cursor:not-allowed; }
+    .scene-preview-area { margin-top:10px;border-radius:8px;overflow:hidden; }
+    .scene-preview-area img { width:100%;display:block;border-radius:8px; }
+    .scene-status-msg { font-size:.78rem;margin-top:8px; }
+    .scene-status-msg.generating { color:#f7896a; }
+    .scene-status-msg.error { color:#f08090; }
+    .scenes-bar { display:flex;align-items:center;justify-content:space-between;margin-bottom:14px; }
+    .scenes-bar-label { font-size:.85rem;color:#aaa; }
+    .btn-create-all { padding:10px 18px;background:linear-gradient(135deg,#f7896a,#ffd04b);border:none;border-radius:8px;color:#1a0a00;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s; }
+    .btn-create-all:hover:not(:disabled) { opacity:.85; }
+    .btn-create-all:disabled { opacity:.4;cursor:not-allowed; }
+    .from-script-error { background:#1f0f14;border:1px solid #4a1a28;border-radius:8px;padding:12px 16px;color:#f08090;font-size:.85rem;margin-bottom:12px;display:none; }
+    .from-script-error.visible { display:block; }
   </style>
 </head>
 <body>
@@ -471,6 +502,27 @@
           <option value="asia-southeast1">asia-southeast1</option>
         </select>
       </div>
+    </div>
+  </div>
+
+  <!-- ── From Script ── -->
+  <div class="card">
+    <div class="from-script-header">
+      <h2>From Script <span class="from-script-sub">— paste a script, get one image prompt per scene</span></h2>
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label for="from-script-input">Video script</label>
+      <textarea id="from-script-input" rows="7" placeholder="Paste your full video script here. The AI will analyze it and generate a tailored image prompt for each scene…"></textarea>
+    </div>
+    <div id="from-script-error" class="from-script-error"></div>
+    <button class="btn-primary" id="analyze-script-btn" style="margin-bottom:0">Analyze Script</button>
+
+    <div id="script-scenes-container" style="display:none;margin-top:24px">
+      <div class="scenes-bar">
+        <span class="scenes-bar-label" id="scenes-count-label"></span>
+        <button class="btn-create-all" id="img-create-all-btn">⚡ Create All Images</button>
+      </div>
+      <div id="script-scenes-list" style="display:flex;flex-direction:column;gap:14px"></div>
     </div>
   </div>
 
@@ -834,6 +886,133 @@
     clearError();
     document.getElementById('prompt').focus();
   });
+
+  // ══════════════════════════════════════════════════════
+  // FROM SCRIPT — analyze script and generate per-scene images
+  // ══════════════════════════════════════════════════════
+  let imageScriptScenes = [];
+  const imageSceneAssets = {}; // key: index → { blob, url, mimeType }
+
+  function showFSError(msg) { const el = document.getElementById('from-script-error'); el.textContent = msg; el.classList.add('visible'); }
+  function hideFSError()    { document.getElementById('from-script-error').classList.remove('visible'); }
+
+  document.getElementById('analyze-script-btn').addEventListener('click', async () => {
+    const script    = document.getElementById('from-script-input').value.trim();
+    const projectId = document.getElementById('project-id').value.trim();
+    if (!script)    { showFSError('Please paste your script first.'); return; }
+    if (!projectId) { showFSError('Enter your Project ID above before analyzing.'); return; }
+
+    hideFSError();
+    const btn = document.getElementById('analyze-script-btn');
+    btn.disabled = true; btn.textContent = 'Analyzing…';
+    document.getElementById('script-scenes-container').style.display = 'none';
+
+    try {
+      const res  = await fetch('/api/analyze-script', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script, projectId }),
+      });
+      const data = await res.json();
+      if (res.status === 401) { sessionStorage.clear(); window.location.href = '/'; return; }
+      if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+      imageScriptScenes = data.scenes || [];
+      Object.keys(imageSceneAssets).forEach(k => delete imageSceneAssets[k]);
+      renderImageScriptScenes();
+    } catch (err) { showFSError(err.message); }
+
+    btn.disabled = false; btn.textContent = 'Analyze Script';
+  });
+
+  function renderImageScriptScenes() {
+    const list = document.getElementById('script-scenes-list');
+    list.innerHTML = '';
+    imageScriptScenes.forEach((scene, i) => list.appendChild(buildImageSceneCard(scene, i)));
+    document.getElementById('scenes-count-label').textContent = `${imageScriptScenes.length} scene${imageScriptScenes.length !== 1 ? 's' : ''} detected`;
+    document.getElementById('script-scenes-container').style.display = '';
+  }
+
+  function buildImageSceneCard(scene, i) {
+    const card = document.createElement('div');
+    card.className = 'scene-card';
+    card.id = `img-scene-card-${i}`;
+    card.innerHTML = `
+      <div class="scene-card-head">
+        <span class="scene-num-dot">${String(scene.sceneNumber).padStart(2,'0')}</span>
+        <span class="scene-card-title">${escImgHtml(scene.sceneTitle)}</span>
+        <span class="scene-dur-tag">${scene.duration}s</span>
+      </div>
+      <textarea class="scene-prompt-ta" id="img-prompt-${i}" rows="3">${escImgHtml(scene.imagePrompt)}</textarea>
+      <div class="scene-card-actions">
+        <button class="btn-scene-create" id="img-create-${i}">Create</button>
+        <button class="btn-scene-sm" id="img-dl-${i}" disabled>Download</button>
+      </div>
+      <div class="scene-preview-area" id="img-preview-${i}"></div>
+      <div class="scene-status-msg" id="img-status-${i}"></div>
+    `;
+    card.querySelector(`#img-create-${i}`).addEventListener('click', () => generateSceneImage(i));
+    card.querySelector(`#img-dl-${i}`).addEventListener('click', () => {
+      const a = imageSceneAssets[i];
+      if (a) imgTriggerDL(a.url, `scene-${i+1}-image.${a.mimeType === 'image/png' ? 'png' : 'jpg'}`);
+    });
+    return card;
+  }
+
+  async function generateSceneImage(i) {
+    const scene     = imageScriptScenes[i];
+    const projectId = document.getElementById('project-id').value.trim();
+    const location  = document.getElementById('location').value;
+    const model     = document.getElementById('model').value;
+    const style     = document.getElementById('style').value;
+    const ar        = document.getElementById('aspect-ratio').value;
+    const prompt    = document.getElementById(`img-prompt-${i}`).value.trim() || scene.imagePrompt;
+
+    if (!projectId) { showFSError('Enter your Project ID above.'); return; }
+
+    const createBtn = document.getElementById(`img-create-${i}`);
+    const statusEl  = document.getElementById(`img-status-${i}`);
+    createBtn.disabled = true;
+    statusEl.textContent = 'Generating…'; statusEl.className = 'scene-status-msg generating';
+
+    try {
+      const res  = await fetch('/api/image', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, projectId, location, model, aspectRatio: ar, style: style === 'none' ? '' : style, count: 1 }),
+      });
+      if (res.status === 401) { sessionStorage.clear(); window.location.href = '/'; return; }
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error?.message || `API error ${res.status}`);
+
+      const img = data.images?.[0];
+      if (!img) throw new Error('No image returned.');
+
+      const url     = `data:${img.mimeType};base64,${img.data}`;
+      imageSceneAssets[i] = { url, blob: null, mimeType: img.mimeType };
+
+      document.getElementById(`img-preview-${i}`).innerHTML = `<img src="${url}" alt="Scene ${i+1}">`;
+      document.getElementById(`img-dl-${i}`).disabled = false;
+      statusEl.textContent = ''; statusEl.className = 'scene-status-msg';
+    } catch (err) {
+      statusEl.textContent = err.message; statusEl.className = 'scene-status-msg error';
+    }
+    createBtn.disabled = false;
+  }
+
+  document.getElementById('img-create-all-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('img-create-all-btn');
+    btn.disabled = true; btn.textContent = 'Creating…';
+    for (let i = 0; i < imageScriptScenes.length; i++) await generateSceneImage(i);
+    btn.disabled = false; btn.textContent = '⚡ Create All Images';
+  });
+
+  function escImgHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function imgTriggerDL(url, name) {
+    const a = Object.assign(document.createElement('a'), { href: url, download: name });
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
 </script>
 </body>
 </html>

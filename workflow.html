@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workflow — AI Studio</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f0f13;
+      color: #e8e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      border-bottom: 1px solid #1e1e2a;
+      background: #0f0f13;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .back-btn { display:flex;align-items:center;gap:6px;color:#666;font-size:.875rem;text-decoration:none;transition:color .2s; }
+    .back-btn:hover { color:#e8e8f0; }
+    .user-chip { display:flex;align-items:center;gap:8px;background:#1a1a24;border:1px solid #2a2a3a;border-radius:20px;padding:5px 12px;font-size:.82rem;color:#aaa; }
+    .user-dot  { width:7px;height:7px;background:#4caf6e;border-radius:50%; }
+    .btn-sign-out { background:none;border:none;color:#555;font-size:.78rem;cursor:pointer;font-family:inherit;margin-left:4px;transition:color .2s; }
+    .btn-sign-out:hover { color:#e8e8f0; }
+
+    /* ── Page ── */
+    .page-body { flex:1;display:flex;flex-direction:column;align-items:center;padding:40px 20px; }
+    .container  { width:100%;max-width:900px;display:flex;flex-direction:column;gap:24px; }
+
+    header { text-align:center; }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #6ee7f7, #a78bfa, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+    }
+    header p { margin-top:8px;color:#888;font-size:.95rem; }
+
+    /* ── Phase stepper ── */
+    .stepper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: #444;
+      font-weight: 500;
+    }
+    .step.active   { color: #e8e8f0; }
+    .step.done     { color: #4caf6e; }
+    .step-num {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 2px solid #333;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step.active .step-num  { border-color: #a78bfa; background: #a78bfa20; color: #a78bfa; }
+    .step.done   .step-num  { border-color: #4caf6e; background: #4caf6e20; color: #4caf6e; }
+    .step-sep { width: 32px; height: 1px; background: #2a2a3a; margin: 0 4px; }
+
+    /* ── Cards ── */
+    .card { background:#1a1a24;border:1px solid #2a2a3a;border-radius:14px;padding:24px; }
+    .card h2 { font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#666;margin-bottom:16px; }
+
+    label { display:block;font-size:.85rem;color:#aaa;margin-bottom:6px; }
+    input[type="text"], input[type="number"], textarea, select {
+      width:100%;background:#111118;border:1px solid #2e2e42;border-radius:8px;
+      color:#e8e8f0;font-size:.95rem;padding:10px 14px;outline:none;
+      transition:border-color .2s;font-family:inherit;
+    }
+    input[type="text"]:focus, input[type="number"]:focus, textarea:focus, select:focus { border-color:#a78bfa; }
+    textarea { resize:vertical; }
+
+    .field { display:flex;flex-direction:column;gap:6px; }
+    .grid-2 { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
+    .note { font-size:.78rem;color:#555;line-height:1.5;margin-top:4px; }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      width:100%;padding:14px 28px;
+      background:linear-gradient(135deg,#a78bfa,#f472b6);
+      border:none;border-radius:10px;color:#fff;font-size:1rem;font-weight:700;
+      cursor:pointer;transition:opacity .2s,transform .1s;letter-spacing:.01em;
+    }
+    .btn-primary:hover:not(:disabled) { opacity:.88; }
+    .btn-primary:active:not(:disabled) { transform:scale(.99); }
+    .btn-primary:disabled { opacity:.45;cursor:not-allowed; }
+
+    .btn-secondary {
+      padding:9px 20px;background:#1e1e2e;border:1px solid #3a3a54;border-radius:8px;
+      color:#c0c0d8;font-size:.875rem;font-weight:500;cursor:pointer;
+      transition:background .2s,border-color .2s;font-family:inherit;
+    }
+    .btn-secondary:hover:not(:disabled) { background:#25253a;border-color:#a78bfa;color:#e8e8f0; }
+    .btn-secondary:disabled { opacity:.4;cursor:not-allowed; }
+
+    .btn-sm {
+      padding:6px 14px;background:#1e1e2e;border:1px solid #3a3a54;border-radius:7px;
+      color:#c0c0d8;font-size:.78rem;font-weight:500;cursor:pointer;
+      transition:background .2s,border-color .2s;font-family:inherit;
+    }
+    .btn-sm:hover:not(:disabled) { background:#25253a;border-color:#a78bfa;color:#e8e8f0; }
+    .btn-sm:disabled { opacity:.4;cursor:not-allowed; }
+
+    /* ── Error ── */
+    .error-box { background:#1f0f14;border:1px solid #4a1a28;border-radius:10px;padding:14px 18px;color:#f08090;font-size:.88rem;line-height:1.5;display:none; }
+    .error-box.visible { display:block; }
+
+    /* ── Spinner ── */
+    .spinner {
+      display:inline-block;width:13px;height:13px;
+      border:2px solid #a78bfa;border-top-color:transparent;
+      border-radius:50%;animation:spin .8s linear infinite;
+      vertical-align:middle;margin-right:6px;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ══════════════════════════════════
+       PHASE 1 — Script
+    ══════════════════════════════════ */
+    #phase1 { display:flex;flex-direction:column;gap:24px; }
+    #phase2, #phase3 { display:none; flex-direction:column; gap:24px; }
+    #phase2.active, #phase3.active { display:flex; }
+
+    #script-output-display {
+      background:#111118;border:1px solid #2e2e42;border-radius:10px;
+      padding:20px 24px;font-size:.9rem;line-height:1.75;color:#e0e0f0;
+      white-space:pre-wrap;word-break:break-word;min-height:100px;max-height:400px;overflow-y:auto;
+    }
+    #script-output-display .sh   { color:#a78bfa;font-weight:700; }
+    #script-output-display .bold { color:#e8e8f0;font-weight:600; }
+    #script-output-display .dir  { color:#f472b6;font-style:italic; }
+    #script-output-display .spk  { color:#60d0f0;font-weight:700; }
+
+    .cursor {
+      display:inline-block;width:2px;height:1em;background:#a78bfa;
+      vertical-align:text-bottom;animation:blink .7s steps(1) infinite;margin-left:1px;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    .phase1-actions { display:flex;gap:12px;flex-wrap:wrap; }
+
+    /* ══════════════════════════════════
+       PHASE 2 — Scene Review
+    ══════════════════════════════════ */
+    .review-scene-card {
+      background:#111118;border:1px solid #2e2e42;border-radius:10px;padding:18px;margin-bottom:14px;
+    }
+    .review-scene-head {
+      display:flex;align-items:center;gap:10px;margin-bottom:14px;
+    }
+    .review-scene-num {
+      width:28px;height:28px;border-radius:50%;
+      background:linear-gradient(135deg,#a78bfa,#f472b6);
+      color:#fff;font-size:.75rem;font-weight:700;
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    }
+    .review-scene-title { font-size:.95rem;font-weight:600;color:#e8e8f0;flex:1; }
+    .review-dur-wrap { display:flex;align-items:center;gap:6px;font-size:.82rem;color:#888; }
+    .review-dur-input {
+      width:60px;background:#1a1a24;border:1px solid #3a3060;border-radius:5px;
+      color:#a78bfa;font-size:.85rem;padding:3px 8px;outline:none;text-align:center;
+      font-family:inherit;
+    }
+    .review-dur-input:focus { border-color:#a78bfa; }
+
+    .review-label { font-size:.72rem;color:#555;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;margin-top:12px; }
+    .review-ta {
+      width:100%;background:#0f0f18;border:1px solid #2a2a3a;border-radius:6px;
+      color:#c8c8e0;font-size:.85rem;padding:8px 12px;resize:vertical;min-height:60px;
+      outline:none;font-family:inherit;transition:border-color .2s;
+    }
+    .review-ta:focus { border-color:#a78bfa; }
+
+    .review-total-bar {
+      display:flex;align-items:center;justify-content:space-between;
+      background:#111118;border:1px solid #2e2e42;border-radius:8px;
+      padding:10px 16px;font-size:.85rem;color:#888;
+    }
+    .review-total-val { color:#e8e8f0;font-weight:600; }
+
+    .review-actions { display:flex;gap:12px;flex-wrap:wrap; }
+
+    /* ══════════════════════════════════
+       PHASE 3 — Asset Studio
+    ══════════════════════════════════ */
+    .studio-scene-card {
+      background:#111118;border:1px solid #2e2e42;border-radius:12px;padding:20px;margin-bottom:16px;
+    }
+    .studio-scene-head {
+      display:flex;align-items:center;gap:10px;margin-bottom:16px;
+    }
+    .studio-scene-num {
+      width:28px;height:28px;border-radius:50%;
+      background:linear-gradient(135deg,#a78bfa,#f472b6);
+      color:#fff;font-size:.75rem;font-weight:700;
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    }
+    .studio-scene-title { font-size:.95rem;font-weight:600;color:#e8e8f0;flex:1; }
+    .studio-dur-badge { font-size:.75rem;background:#1a1a2a;border:1px solid #3a3060;border-radius:4px;color:#a78bfa;padding:2px 8px; }
+
+    .studio-cols { display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px; }
+    @media (max-width:700px) { .studio-cols { grid-template-columns:1fr; } }
+
+    .asset-block {
+      background:#0f0f18;border:1px solid #2a2a3a;border-radius:8px;padding:14px;
+      display:flex;flex-direction:column;gap:8px;
+    }
+    .asset-block-label {
+      font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:#555;font-weight:600;
+    }
+    .asset-prompt-ta {
+      width:100%;background:#111118;border:1px solid #2e2e42;border-radius:5px;
+      color:#bbb;font-size:.8rem;padding:6px 10px;resize:vertical;min-height:55px;
+      outline:none;font-family:inherit;transition:border-color .2s;
+    }
+    .asset-prompt-ta:focus { border-color:#a78bfa; }
+
+    .asset-preview { min-height:40px; }
+    .asset-preview img { width:100%;border-radius:6px;border:1px solid #2a2a3a; }
+    .asset-preview video { width:100%;border-radius:6px;background:#000;border:1px solid #2a2a3a; }
+    .asset-preview audio { width:100%;margin-top:4px; }
+
+    .asset-actions { display:flex;gap:6px;flex-wrap:wrap; }
+    .asset-status { font-size:.75rem;color:#a78bfa;min-height:1.2em; }
+    .asset-status.err { color:#f08090; }
+
+    /* ── Batch & export bar ── */
+    .batch-bar {
+      display:flex;align-items:center;justify-content:space-between;
+      flex-wrap:wrap;gap:10px;
+    }
+    .batch-btns { display:flex;gap:8px;flex-wrap:wrap; }
+
+    .export-card { background:#1a1a24;border:1px solid #2a2a3a;border-radius:14px;padding:24px; }
+    .export-card h2 { font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#666;margin-bottom:16px; }
+    .export-btns { display:flex;gap:12px;flex-wrap:wrap; }
+
+    @media (max-width:600px) { .grid-2 { grid-template-columns:1fr; } .phase1-actions,.review-actions { flex-direction:column; } }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="/dashboard" class="back-btn">← Dashboard</a>
+  <div class="user-chip">
+    <span class="user-dot"></span>
+    <span id="user-email">…</span>
+    <button class="btn-sign-out" id="sign-out-btn">Sign out</button>
+  </div>
+</nav>
+
+<div class="page-body">
+<div class="container">
+
+  <header>
+    <h1>Production Workflow</h1>
+    <p>Write your script, review scenes, then generate voiceovers, images, and videos — all in one place.</p>
+  </header>
+
+  <!-- Stepper -->
+  <div class="stepper">
+    <div class="step active" id="step1"><span class="step-num">1</span> Script</div>
+    <div class="step-sep"></div>
+    <div class="step" id="step2"><span class="step-num">2</span> Review Scenes</div>
+    <div class="step-sep"></div>
+    <div class="step" id="step3"><span class="step-num">3</span> Asset Studio</div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       PHASE 1 — Script
+  ══════════════════════════════════ -->
+  <div id="phase1">
+
+    <div class="card">
+      <h2>Project</h2>
+      <div class="field">
+        <label for="wf-project-id">Google Cloud Project ID</label>
+        <input type="text" id="wf-project-id" placeholder="my-gcp-project" />
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Script</h2>
+      <div class="field" style="margin-bottom:16px">
+        <label for="wf-script-ta">Your video script</label>
+        <textarea id="wf-script-ta" rows="14" placeholder="Paste an existing script or write one from scratch. You can also use the Script Writer tool and click 'Send to Workflow' to pre-fill this."></textarea>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label for="wf-scene-count">Target scene count</label>
+          <select id="wf-scene-count">
+            <option value="3">3 scenes</option>
+            <option value="4">4 scenes</option>
+            <option value="5" selected>5 scenes</option>
+            <option value="6">6 scenes</option>
+            <option value="7">7 scenes</option>
+            <option value="8">8 scenes</option>
+            <option value="10">10 scenes</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="wf-scene-duration">Default scene duration (s)</label>
+          <input type="number" id="wf-scene-duration" value="10" min="3" max="60" step="1" />
+        </div>
+      </div>
+
+      <details style="margin-top:16px">
+        <summary style="cursor:pointer;font-size:.85rem;color:#666;list-style:none;display:flex;align-items:center;gap:6px;padding:6px 0;user-select:none">
+          <span style="font-size:.6rem;transition:transform .2s" id="ai-details-arrow">▶</span> Write script with AI
+        </summary>
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:12px">
+          <div class="field">
+            <label for="wf-ai-brief">Script brief</label>
+            <textarea id="wf-ai-brief" rows="4" placeholder="Describe what the video should be about, tone, audience, key points, etc."></textarea>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="wf-ai-type">Script type</label>
+              <select id="wf-ai-type">
+                <option value="YouTube Video" selected>YouTube Video</option>
+                <option value="Short Film">Short Film</option>
+                <option value="Documentary">Documentary</option>
+                <option value="Advertisement">Advertisement</option>
+                <option value="Educational Video">Educational Video</option>
+                <option value="Product Demo">Product Demo</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="wf-ai-tone">Tone</label>
+              <select id="wf-ai-tone">
+                <option value="Conversational" selected>Conversational</option>
+                <option value="Professional">Professional</option>
+                <option value="Educational">Educational</option>
+                <option value="Inspirational">Inspirational</option>
+                <option value="Energetic">Energetic / Hype</option>
+                <option value="Calm and soothing">Calm &amp; Soothing</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn-secondary" id="wf-write-ai-btn">Write with AI</button>
+          <div id="wf-ai-output" style="display:none">
+            <div id="script-output-display"></div>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="error-box" id="phase1-error"></div>
+
+    <button class="btn-primary" id="analyze-btn">Analyze Script → Review Scenes</button>
+
+  </div>
+
+  <!-- ══════════════════════════════════
+       PHASE 2 — Review Scenes
+  ══════════════════════════════════ -->
+  <div id="phase2">
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <h2 style="margin-bottom:0">Scene Breakdown</h2>
+        <button class="btn-sm" id="back-to-script-btn">← Edit Script</button>
+      </div>
+      <div id="review-scenes-list"></div>
+      <div class="review-total-bar" style="margin-top:4px">
+        <span>Total estimated duration</span>
+        <span class="review-total-val" id="review-total">0s</span>
+      </div>
+    </div>
+
+    <div class="error-box" id="phase2-error"></div>
+
+    <div class="review-actions">
+      <button class="btn-primary" id="approve-btn" style="flex:1">Approve &amp; Open Asset Studio →</button>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════
+       PHASE 3 — Asset Studio
+  ══════════════════════════════════ -->
+  <div id="phase3">
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
+        <h2 style="margin-bottom:0">Asset Studio</h2>
+        <button class="btn-sm" id="back-to-review-btn">← Edit Scenes</button>
+      </div>
+      <p style="font-size:.82rem;color:#555;margin-bottom:20px">Edit prompts inline. Generate assets one-by-one or use batch buttons.</p>
+
+      <div class="batch-bar" style="margin-bottom:20px">
+        <span style="font-size:.82rem;color:#666" id="studio-scene-label"></span>
+        <div class="batch-btns">
+          <button class="btn-sm" id="batch-vo-btn">Generate All Voiceovers</button>
+          <button class="btn-sm" id="batch-img-btn">Generate All Images</button>
+          <button class="btn-sm" id="batch-vid-btn">Generate All Videos</button>
+        </div>
+      </div>
+
+      <div id="studio-scenes-list"></div>
+    </div>
+
+    <div class="export-card">
+      <h2>Export</h2>
+      <div class="export-btns">
+        <button class="btn-secondary" id="dl-vo-btn">Download All Voiceovers</button>
+        <button class="btn-secondary" id="dl-img-btn">Download All Images</button>
+        <button class="btn-secondary" id="dl-vid-btn">Download All Videos</button>
+        <button class="btn-secondary" id="dl-zip-btn">Download ZIP (All Assets)</button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</div>
+
+<script>
+  // Auth guard
+  const token = sessionStorage.getItem('access_token');
+  if (!token) window.location.href = '/';
+
+  // User info
+  function getEmail() {
+    const t = sessionStorage.getItem('id_token');
+    if (!t) return null;
+    try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email || null; }
+    catch { return null; }
+  }
+  document.getElementById('user-email').textContent = getEmail() || 'Signed in';
+  document.getElementById('sign-out-btn').addEventListener('click', () => { sessionStorage.clear(); window.location.href = '/'; });
+
+  // Pre-fill project ID + restore workflow state from sessionStorage
+  (async function init() {
+    try {
+      const cfg = await (await fetch('/api/config')).json();
+      if (cfg.projectId && !document.getElementById('wf-project-id').value)
+        document.getElementById('wf-project-id').value = cfg.projectId;
+    } catch {}
+    const saved = sessionStorage.getItem('project_id');
+    if (saved && !document.getElementById('wf-project-id').value)
+      document.getElementById('wf-project-id').value = saved;
+
+    // Restore from Script Writer
+    const wfScript = sessionStorage.getItem('workflow_script');
+    if (wfScript) {
+      document.getElementById('wf-script-ta').value = wfScript;
+      sessionStorage.removeItem('workflow_script');
+    }
+    const wfCount = sessionStorage.getItem('workflow_scene_count');
+    if (wfCount) {
+      const sel = document.getElementById('wf-scene-count');
+      for (let o of sel.options) if (o.value === wfCount) { o.selected = true; break; }
+      sessionStorage.removeItem('workflow_scene_count');
+    }
+    const wfDur = sessionStorage.getItem('workflow_scene_duration');
+    if (wfDur) {
+      document.getElementById('wf-scene-duration').value = wfDur;
+      sessionStorage.removeItem('workflow_scene_duration');
+    }
+  })();
+
+  // ── Utilities ─────────────────────────────────────────────────────────────
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function base64ToBlob(b64, mime) {
+    const bytes = atob(b64), arr = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+    return new Blob([arr], { type: mime });
+  }
+
+  async function safeJson(res) {
+    const text = await res.text();
+    try { return JSON.parse(text); }
+    catch { throw new Error(`Non-JSON (${res.status}): ${text.slice(0,200)}`); }
+  }
+
+  function showErr(el, msg) { el.textContent = msg; el.classList.add('visible'); }
+  function clearErr(el) { el.textContent = ''; el.classList.remove('visible'); }
+
+  // ── Stepper ───────────────────────────────────────────────────────────────
+  function setStep(n) {
+    for (let i = 1; i <= 3; i++) {
+      const el = document.getElementById(`step${i}`);
+      el.classList.remove('active','done');
+      if (i < n) el.classList.add('done');
+      else if (i === n) el.classList.add('active');
+    }
+    document.getElementById('phase1').style.display = n === 1 ? 'flex' : 'none';
+    document.getElementById('phase2').style.display = n === 2 ? 'flex' : 'none';
+    document.getElementById('phase3').style.display = n === 3 ? 'flex' : 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PHASE 1 — Script
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // AI script writing (streaming)
+  function renderScript(raw) {
+    return raw
+      .replace(/\*\*(.+?)\*\*/g, '<span class="bold">$1</span>')
+      .replace(/^#{1,3} (.+)$/gm, '<span class="sh">$1</span>')
+      .replace(/\[([^\]]+)\]/g, '<span class="dir">[$1]</span>')
+      .replace(/\(([^)]+)\)/g, '<span class="dir">($1)</span>')
+      .replace(/^([A-Z][A-Z0-9 ]{1,24}):/gm, '<span class="spk">$1:</span>');
+  }
+
+  let aiRawText = '';
+
+  document.getElementById('wf-write-ai-btn').addEventListener('click', async () => {
+    const brief = document.getElementById('wf-ai-brief').value.trim();
+    const projectId = document.getElementById('wf-project-id').value.trim();
+    const errEl = document.getElementById('phase1-error');
+    clearErr(errEl);
+
+    if (!brief) { showErr(errEl, 'Please enter a script brief.'); return; }
+    if (!projectId) { showErr(errEl, 'Please enter your GCP Project ID.'); return; }
+
+    const btn = document.getElementById('wf-write-ai-btn');
+    btn.disabled = true; btn.textContent = 'Writing…';
+
+    const outWrap = document.getElementById('wf-ai-output');
+    const outEl   = document.getElementById('script-output-display');
+    outWrap.style.display = '';
+    outEl.innerHTML = '<span class="cursor"></span>';
+    aiRawText = '';
+
+    const payload = {
+      prompt: brief,
+      projectId,
+      scriptType: document.getElementById('wf-ai-type').value,
+      tone:       document.getElementById('wf-ai-tone').value,
+      length:     'Medium (3–5 min)',
+      format:     'Single Narrator',
+      language:   'English',
+      model:      'gemini-2.5-flash',
+    };
+
+    try {
+      const res = await fetch('/api/script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        let msg = `Request failed (${res.status})`;
+        try { const j = await res.json(); msg = j.error || msg; } catch {}
+        throw new Error(msg);
+      }
+
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6).trim();
+          if (payload === '[DONE]') continue;
+          try {
+            const obj = JSON.parse(payload);
+            if (obj.text) {
+              aiRawText += obj.text;
+              outEl.innerHTML = renderScript(aiRawText) + '<span class="cursor"></span>';
+            }
+          } catch {}
+        }
+      }
+
+      outEl.innerHTML = renderScript(aiRawText);
+      // Copy into the script textarea
+      document.getElementById('wf-script-ta').value = aiRawText;
+
+    } catch (err) {
+      showErr(errEl, err.message);
+    }
+
+    btn.disabled = false; btn.textContent = 'Write with AI';
+  });
+
+  // ── Analyze script → Phase 2 ──────────────────────────────────────────────
+  let wfScenes = [];
+
+  document.getElementById('analyze-btn').addEventListener('click', async () => {
+    const script    = document.getElementById('wf-script-ta').value.trim();
+    const projectId = document.getElementById('wf-project-id').value.trim();
+    const errEl     = document.getElementById('phase1-error');
+    clearErr(errEl);
+
+    if (!script)    { showErr(errEl, 'Please paste or write a script first.'); return; }
+    if (!projectId) { showErr(errEl, 'Please enter your GCP Project ID.'); return; }
+
+    const btn = document.getElementById('analyze-btn');
+    btn.disabled = true; btn.textContent = 'Analyzing…';
+
+    try {
+      const res = await fetch('/api/analyze-script', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script, projectId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Status ${res.status}`);
+      if (!data.scenes || !data.scenes.length) throw new Error('No scenes returned.');
+
+      wfScenes = data.scenes;
+      const defaultDur = parseInt(document.getElementById('wf-scene-duration').value) || 10;
+      wfScenes.forEach(s => { if (!s.duration) s.duration = defaultDur; });
+
+      renderReviewScenes();
+      setStep(2);
+    } catch (err) {
+      showErr(errEl, err.message);
+    }
+
+    btn.disabled = false; btn.textContent = 'Analyze Script → Review Scenes';
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PHASE 2 — Review Scenes
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function renderReviewScenes() {
+    const list = document.getElementById('review-scenes-list');
+    list.innerHTML = wfScenes.map((s, i) => `
+      <div class="review-scene-card">
+        <div class="review-scene-head">
+          <div class="review-scene-num">${s.sceneNumber}</div>
+          <div class="review-scene-title">${escHtml(s.sceneTitle || `Scene ${s.sceneNumber}`)}</div>
+          <div class="review-dur-wrap">
+            <input class="review-dur-input" type="number" id="rdur-${i}" value="${s.duration || 10}" min="1" max="300" oninput="updateReviewTotal()">
+            <span>s</span>
+          </div>
+        </div>
+        <div class="review-label">Voiceover</div>
+        <textarea class="review-ta" id="rvo-${i}" rows="3">${escHtml(s.voiceoverText || '')}</textarea>
+        <div class="review-label">Image Prompt</div>
+        <textarea class="review-ta" id="rimg-${i}" rows="2">${escHtml(s.imagePrompt || '')}</textarea>
+        <div class="review-label">Video Prompt</div>
+        <textarea class="review-ta" id="rvid-${i}" rows="2">${escHtml(s.videoPrompt || '')}</textarea>
+      </div>
+    `).join('');
+    updateReviewTotal();
+  }
+
+  function updateReviewTotal() {
+    let total = 0;
+    wfScenes.forEach((_, i) => {
+      const el = document.getElementById(`rdur-${i}`);
+      if (el) total += parseFloat(el.value) || 0;
+    });
+    document.getElementById('review-total').textContent = `${total}s`;
+  }
+
+  document.getElementById('back-to-script-btn').addEventListener('click', () => setStep(1));
+
+  document.getElementById('approve-btn').addEventListener('click', () => {
+    // Commit edits back into wfScenes
+    wfScenes.forEach((s, i) => {
+      s.voiceoverText = document.getElementById(`rvo-${i}`).value;
+      s.imagePrompt   = document.getElementById(`rimg-${i}`).value;
+      s.videoPrompt   = document.getElementById(`rvid-${i}`).value;
+      s.duration      = parseFloat(document.getElementById(`rdur-${i}`).value) || s.duration;
+    });
+    buildAssetStudio();
+    setStep(3);
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PHASE 3 — Asset Studio
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // Storage: { i: { vo: { blob, url }, img: { blob, url }, vid: { blob, url } } }
+  const studioAssets = {};
+
+  function buildAssetStudio() {
+    document.getElementById('studio-scene-label').textContent =
+      `${wfScenes.length} scene${wfScenes.length !== 1 ? 's' : ''}`;
+
+    const list = document.getElementById('studio-scenes-list');
+    list.innerHTML = wfScenes.map((s, i) => `
+      <div class="studio-scene-card">
+        <div class="studio-scene-head">
+          <div class="studio-scene-num">${s.sceneNumber}</div>
+          <div class="studio-scene-title">${escHtml(s.sceneTitle || `Scene ${s.sceneNumber}`)}</div>
+          <span class="studio-dur-badge">${s.duration}s</span>
+        </div>
+        <div class="studio-cols">
+
+          <!-- Voiceover -->
+          <div class="asset-block">
+            <div class="asset-block-label">Voiceover</div>
+            <textarea class="asset-prompt-ta" id="wf-vota-${i}">${escHtml(s.voiceoverText || '')}</textarea>
+            <div class="asset-preview" id="wf-vopreview-${i}"></div>
+            <div class="asset-actions">
+              <button class="btn-sm" onclick="wfGenVo(${i})">Generate</button>
+            </div>
+            <div class="asset-status" id="wf-vostatus-${i}"></div>
+          </div>
+
+          <!-- Image -->
+          <div class="asset-block">
+            <div class="asset-block-label">Image</div>
+            <textarea class="asset-prompt-ta" id="wf-imgta-${i}">${escHtml(s.imagePrompt || '')}</textarea>
+            <div class="asset-preview" id="wf-imgpreview-${i}"></div>
+            <div class="asset-actions">
+              <button class="btn-sm" onclick="wfGenImg(${i})">Generate</button>
+            </div>
+            <div class="asset-status" id="wf-imgstatus-${i}"></div>
+          </div>
+
+          <!-- Video -->
+          <div class="asset-block">
+            <div class="asset-block-label">Video</div>
+            <textarea class="asset-prompt-ta" id="wf-vidta-${i}">${escHtml(s.videoPrompt || '')}</textarea>
+            <div class="asset-preview" id="wf-vidpreview-${i}"></div>
+            <div class="asset-actions">
+              <button class="btn-sm" onclick="wfGenVid(${i})">Generate</button>
+            </div>
+            <div class="asset-status" id="wf-vidstatus-${i}"></div>
+          </div>
+
+        </div>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('back-to-review-btn').addEventListener('click', () => {
+    renderReviewScenes(); setStep(2);
+  });
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function setAssetStatus(type, i, msg, isErr) {
+    const el = document.getElementById(`wf-${type}status-${i}`);
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'asset-status' + (isErr ? ' err' : '');
+  }
+  function setAssetStatusHtml(type, i, html) {
+    const el = document.getElementById(`wf-${type}status-${i}`);
+    if (el) el.innerHTML = html;
+  }
+
+  // ── Voiceover generation ───────────────────────────────────────────────────
+  let wfTtsProjectId = null;
+  (async function loadTtsProjectId() {
+    try { const cfg = await (await fetch('/api/config')).json(); wfTtsProjectId = cfg.projectId || null; } catch {}
+  })();
+
+  async function wfGenVo(i) {
+    const text = document.getElementById(`wf-vota-${i}`).value.trim();
+    if (!text) { setAssetStatus('vo', i, 'Voiceover text is empty.', true); return; }
+
+    setAssetStatusHtml('vo', i, '<span class="spinner"></span> Generating…');
+    document.getElementById(`wf-vopreview-${i}`).innerHTML = '';
+
+    try {
+      const body = { text, voice: 'Kore', projectId: wfTtsProjectId || document.getElementById('wf-project-id').value.trim() };
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || `Status ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      if (!studioAssets[i]) studioAssets[i] = {};
+      studioAssets[i].vo = { blob, url };
+      document.getElementById(`wf-vopreview-${i}`).innerHTML =
+        `<audio src="${url}" controls style="width:100%;margin-top:4px"></audio>
+         <a href="${url}" download="scene-${wfScenes[i].sceneNumber}-vo.wav" class="btn-sm" style="display:inline-block;margin-top:6px">Download WAV</a>`;
+      setAssetStatus('vo', i, 'Done!');
+    } catch (err) {
+      setAssetStatus('vo', i, err.message, true);
+    }
+  }
+
+  // ── Image generation ───────────────────────────────────────────────────────
+  async function wfGenImg(i) {
+    const prompt = document.getElementById(`wf-imgta-${i}`).value.trim();
+    const projectId = document.getElementById('wf-project-id').value.trim();
+    if (!prompt)    { setAssetStatus('img', i, 'Prompt is empty.', true); return; }
+    if (!projectId) { setAssetStatus('img', i, 'Enter Project ID first.', true); return; }
+
+    setAssetStatusHtml('img', i, '<span class="spinner"></span> Generating…');
+    document.getElementById(`wf-imgpreview-${i}`).innerHTML = '';
+
+    try {
+      const res = await fetch('/api/image', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, projectId, aspectRatio: '1:1', sampleCount: 1 }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Status ${res.status}`);
+      const b64 = data.images?.[0]?.bytesBase64Encoded || data.images?.[0];
+      if (!b64) throw new Error('No image data returned.');
+      const blob = base64ToBlob(b64, 'image/png');
+      const url = URL.createObjectURL(blob);
+      if (!studioAssets[i]) studioAssets[i] = {};
+      studioAssets[i].img = { blob, url };
+      document.getElementById(`wf-imgpreview-${i}`).innerHTML =
+        `<img src="${url}" alt="Scene ${wfScenes[i].sceneNumber}">
+         <a href="${url}" download="scene-${wfScenes[i].sceneNumber}-image.png" class="btn-sm" style="display:inline-block;margin-top:6px">Download PNG</a>`;
+      setAssetStatus('img', i, 'Done!');
+    } catch (err) {
+      setAssetStatus('img', i, err.message, true);
+    }
+  }
+
+  // ── Video generation ───────────────────────────────────────────────────────
+  async function wfGenVid(i) {
+    const prompt    = document.getElementById(`wf-vidta-${i}`).value.trim();
+    const projectId = document.getElementById('wf-project-id').value.trim();
+    if (!prompt)    { setAssetStatus('vid', i, 'Prompt is empty.', true); return; }
+    if (!projectId) { setAssetStatus('vid', i, 'Enter Project ID first.', true); return; }
+
+    setAssetStatusHtml('vid', i, '<span class="spinner"></span> Submitting…');
+    document.getElementById(`wf-vidpreview-${i}`).innerHTML = '';
+
+    const location  = 'us-central1';
+    const modelId   = 'veo-3.1-lite-generate-001';
+    const vertexPath = `/v1/projects/${projectId}/locations/${location}/publishers/google/models/${modelId}:predictLongRunning`;
+
+    let operationName;
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'X-Vertex-Path': vertexPath },
+        body: JSON.stringify({ instances: [{ prompt, aspectRatio: '16:9', duration: '6s' }], parameters: { sampleCount: 1 } }),
+      });
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data?.error?.message || `API error ${res.status}`);
+      operationName = data.name;
+      if (!operationName) throw new Error('No operation name returned.');
+    } catch (err) {
+      setAssetStatus('vid', i, err.message, true); return;
+    }
+
+    const maxAttempts = 80, pollInterval = 12000;
+    let attempts = 0;
+    while (attempts < maxAttempts) {
+      await sleep(pollInterval);
+      attempts++;
+      setAssetStatusHtml('vid', i, `<span class="spinner"></span> Generating… (${attempts * 12}s)`);
+
+      let opData;
+      try {
+        const pollRes = await fetch(`/api/poll?operation=${encodeURIComponent(operationName)}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        opData = await safeJson(pollRes);
+        if (!pollRes.ok) throw new Error(opData?.error?.message || `Poll error ${pollRes.status}`);
+      } catch (err) { setAssetStatus('vid', i, err.message, true); return; }
+
+      if (opData.done) {
+        if (opData.error) { setAssetStatus('vid', i, 'Failed: ' + (opData.error.message || 'Unknown error'), true); return; }
+        const predictions = opData?.response?.predictions || opData?.response?.videos;
+        if (!predictions?.length) { setAssetStatus('vid', i, 'No video in response.', true); return; }
+
+        const pred = predictions[0];
+        const videoBase64 = pred?.bytesBase64Encoded || pred?.videoContent
+          || pred?.generatedSamples?.[0]?.video?.encodedVideo || pred?.generatedSamples?.[0]?.rawContent;
+        const videoGcsUri = pred?.videoUri || pred?.gcsUri || pred?.generatedSamples?.[0]?.videoUri;
+
+        const finalize = (blob, url) => {
+          if (!studioAssets[i]) studioAssets[i] = {};
+          studioAssets[i].vid = { blob, url };
+          document.getElementById(`wf-vidpreview-${i}`).innerHTML =
+            `<video src="${url}" controls playsinline></video>
+             <a href="${url}" download="scene-${wfScenes[i].sceneNumber}-video.mp4" class="btn-sm" style="display:inline-block;margin-top:6px">Download MP4</a>`;
+          setAssetStatus('vid', i, 'Done!');
+        };
+
+        if (videoBase64) {
+          const blob = base64ToBlob(videoBase64, 'video/mp4');
+          finalize(blob, URL.createObjectURL(blob));
+        } else if (videoGcsUri) {
+          try {
+            const match = videoGcsUri.match(/^gs:\/\/([^/]+)\/(.+)$/);
+            if (!match) throw new Error('Bad GCS URI');
+            const [, bucket, object] = match;
+            const vRes = await fetch(`https://storage.googleapis.com/storage/v1/b/${bucket}/o/${encodeURIComponent(object)}?alt=media`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (!vRes.ok) throw new Error(`GCS ${vRes.status}`);
+            const blob = await vRes.blob();
+            finalize(blob, URL.createObjectURL(blob));
+          } catch {
+            document.getElementById(`wf-vidpreview-${i}`).innerHTML =
+              `<p style="font-size:.78rem;color:#aaa;margin-top:4px">Saved to GCS: <code style="color:#a78bfa">${escHtml(videoGcsUri)}</code></p>`;
+            setAssetStatus('vid', i, 'Saved to GCS.');
+          }
+        } else {
+          setAssetStatus('vid', i, 'Unexpected response format.', true);
+        }
+        return;
+      }
+    }
+    setAssetStatus('vid', i, 'Timed out after ~16 min.', true);
+  }
+
+  // ── Batch buttons ─────────────────────────────────────────────────────────
+  async function batchGen(type, genFn) {
+    const btn = document.getElementById(`batch-${type}-btn`);
+    btn.disabled = true;
+    const orig = btn.textContent;
+    for (let i = 0; i < wfScenes.length; i++) {
+      btn.textContent = `${orig} (${i + 1}/${wfScenes.length})`;
+      await genFn(i);
+    }
+    btn.disabled = false; btn.textContent = orig;
+  }
+
+  document.getElementById('batch-vo-btn').addEventListener('click',  () => batchGen('vo',  wfGenVo));
+  document.getElementById('batch-img-btn').addEventListener('click', () => batchGen('img', wfGenImg));
+  document.getElementById('batch-vid-btn').addEventListener('click', () => batchGen('vid', wfGenVid));
+
+  // ── Download helpers ───────────────────────────────────────────────────────
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadByType(assetKey, ext) {
+    let found = false;
+    wfScenes.forEach((s, i) => {
+      const a = studioAssets[i]?.[assetKey];
+      if (a?.blob) { triggerDownload(a.blob, `scene-${s.sceneNumber}-${assetKey}.${ext}`); found = true; }
+    });
+    if (!found) alert(`No ${assetKey} assets generated yet.`);
+  }
+
+  document.getElementById('dl-vo-btn').addEventListener('click',  () => downloadByType('vo',  'wav'));
+  document.getElementById('dl-img-btn').addEventListener('click', () => downloadByType('img', 'png'));
+  document.getElementById('dl-vid-btn').addEventListener('click', () => downloadByType('vid', 'mp4'));
+
+  document.getElementById('dl-zip-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('dl-zip-btn');
+    btn.disabled = true; btn.textContent = 'Building ZIP…';
+    try {
+      if (!window.JSZip) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/jszip@3/dist/jszip.min.js';
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
+      }
+      const zip = new JSZip();
+      let count = 0;
+      wfScenes.forEach((s, i) => {
+        const a = studioAssets[i] || {};
+        if (a.vo?.blob)  { zip.file(`scene-${s.sceneNumber}-voiceover.wav`, a.vo.blob);  count++; }
+        if (a.img?.blob) { zip.file(`scene-${s.sceneNumber}-image.png`,     a.img.blob); count++; }
+        if (a.vid?.blob) { zip.file(`scene-${s.sceneNumber}-video.mp4`,     a.vid.blob); count++; }
+      });
+      if (!count) { alert('No assets generated yet.'); return; }
+      const blob = await zip.generateAsync({ type: 'blob' });
+      triggerDownload(blob, 'workflow-assets.zip');
+    } catch (err) {
+      alert('ZIP error: ' + err.message);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Download ZIP (All Assets)';
+    }
+  });
+</script>
+</body>
+</html>

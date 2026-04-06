@@ -211,6 +211,24 @@
       font-size: 0.75rem; color: var(--muted); background: #1a1a24;
       border: 1px solid var(--border); border-radius: 5px; padding: 3px 8px;
     }
+    .dur-input-wrap { display: flex; align-items: center; gap: 4px; }
+    .dur-input {
+      width: 52px; font-size: 0.78rem; font-weight: 600; color: var(--text);
+      background: #111118; border: 1px solid var(--border); border-radius: 6px;
+      padding: 3px 7px; text-align: center; font-family: inherit;
+      outline: none; transition: border-color 0.2s;
+    }
+    .dur-input:focus { border-color: var(--agent-a); }
+    .dur-input::-webkit-inner-spin-button,
+    .dur-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+    .dur-input[type=number] { -moz-appearance: textfield; }
+    .dur-unit { font-size: 0.75rem; color: var(--muted); }
+    .dur-total-badge {
+      font-size: 0.78rem; font-weight: 600; padding: 4px 10px; border-radius: 6px;
+      background: linear-gradient(135deg, #f5a62320, #ff6b3510);
+      border: 1px solid #f5a62340; color: var(--agent-a);
+      transition: color 0.2s;
+    }
     .scene-review-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
     .review-field label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
     .review-field textarea { font-size: 0.88rem; }
@@ -496,7 +514,7 @@
       <p id="plan-description"></p>
       <div class="plan-stats">
         <span class="stat-badge" id="stat-scenes"></span>
-        <span class="stat-badge" id="stat-duration"></span>
+        <span class="dur-total-badge" id="stat-duration" title="Adjust per-scene durations below — this updates live"></span>
         <span class="stat-badge mode" id="stat-mode"></span>
       </div>
     </div>
@@ -695,7 +713,6 @@
     document.getElementById('plan-title').textContent       = plan.title;
     document.getElementById('plan-description').textContent = plan.description;
     document.getElementById('stat-scenes').textContent      = `${plan.scenes.length} scenes`;
-    document.getElementById('stat-duration').textContent    = `~${plan.totalEstimatedDuration}s`;
     document.getElementById('stat-mode').textContent        = { images: 'Images Only', mix: 'Mix', videos: 'Videos Only' }[selectedMode] || selectedMode;
 
     const list = document.getElementById('scenes-review');
@@ -709,7 +726,11 @@
           <span class="scene-num-badge">${String(scene.sceneNumber).padStart(2, '0')}</span>
           <span class="scene-review-title">${escHtml(scene.sceneTitle)}</span>
           <span class="type-badge ${scene.visualType}">${scene.visualType}</span>
-          <span class="dur-badge">${scene.voiceDuration}s</span>
+          <div class="dur-input-wrap" title="Scene duration in seconds">
+            <input class="dur-input review-dur" type="number" min="1" max="120"
+              data-scene="${i}" value="${scene.voiceDuration}">
+            <span class="dur-unit">s</span>
+          </div>
         </div>
         <div class="scene-review-body">
           <div class="review-field">
@@ -723,6 +744,12 @@
         </div>
       `;
       list.appendChild(card);
+    });
+
+    // Wire live total and attach input listeners after cards are in DOM
+    updateDurationTotal();
+    list.addEventListener('input', e => {
+      if (e.target.classList.contains('review-dur')) updateDurationTotal();
     });
   }
 
@@ -740,13 +767,28 @@
     }
   });
 
-  // Approve — read edited values back into plan, then go to Phase 3
+  // Live total duration counter for Phase 2
+  function updateDurationTotal() {
+    let total = 0;
+    document.querySelectorAll('.review-dur').forEach(el => {
+      total += Math.max(1, parseInt(el.value) || 0);
+    });
+    document.getElementById('stat-duration').textContent = `Total: ${total}s`;
+  }
+
+  // Approve — read all edited values back into plan, then go to Phase 3
   document.getElementById('btn-approve').addEventListener('click', () => {
     document.querySelectorAll('.review-vo').forEach(el => {
       plan.scenes[parseInt(el.dataset.scene)].voiceoverText = el.value.trim();
     });
     document.querySelectorAll('.review-vp').forEach(el => {
       plan.scenes[parseInt(el.dataset.scene)].visualPrompt = el.value.trim();
+    });
+    document.querySelectorAll('.review-dur').forEach(el => {
+      const i   = parseInt(el.dataset.scene);
+      const dur = Math.max(1, parseInt(el.value) || plan.scenes[i].voiceDuration);
+      plan.scenes[i].voiceDuration  = dur;
+      plan.scenes[i].visualDuration = dur;
     });
 
     renderAssetStudio();

@@ -287,6 +287,8 @@
     .remotion-instructions code { background:#111118;border:1px solid #2e2e42;border-radius:4px;padding:1px 7px;font-size:.82rem;color:#a78bfa; }
     .remotion-instructions .cmd  { color:#4caf6e; }
     .remotion-cta { margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center; }
+    .render-progress-track { height:8px;background:#1a1a2a;border-radius:4px;overflow:hidden;margin-top:4px; }
+    .render-progress-fill  { height:100%;background:linear-gradient(90deg,#a78bfa,#f472b6);border-radius:4px;transition:width .4s ease; }
 
     @media (max-width:600px) { .grid-2 { grid-template-columns:1fr; } .phase1-actions,.review-actions { flex-direction:column; } }
   </style>
@@ -494,33 +496,61 @@
   </div>
 
   <!-- ══════════════════════════════════
-       PHASE 4 — Remotion Render
+       PHASE 4 — Render
   ══════════════════════════════════ -->
   <div id="phase4">
 
+    <!-- Primary: In-browser render -->
     <div class="remotion-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
-        <h2 style="margin-bottom:0">Remotion Video Assembly</h2>
+        <h2 style="margin-bottom:0">Render Final Video</h2>
         <button class="btn-sm" id="back-to-studio-btn">← Back to Asset Studio</button>
       </div>
       <p style="font-size:.82rem;color:#555;margin-bottom:20px;line-height:1.6">
-        Your scenes will be packaged into a <strong style="color:#a78bfa">Remotion</strong> React project.
-        Download it, run two commands, and get your final <code style="background:#111118;border:1px solid #2e2e42;border-radius:4px;padding:1px 6px;font-size:.8rem;color:#4caf6e">output.mp4</code>.
+        Render your video <strong style="color:#a78bfa">directly in the browser</strong> using WebAssembly FFmpeg —
+        no upload, no CLI. Preview quality (720p). For 1080p production quality, download the Remotion project below.
       </p>
+
       <div id="remotion-summary"></div>
-      <div class="remotion-cta">
-        <button class="btn-primary" id="remotion-download-btn" style="width:auto;padding:12px 28px">⬇ Download Remotion Project</button>
-        <span id="remotion-dl-status" style="font-size:.82rem;color:#a78bfa"></span>
+
+      <div style="margin-top:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <button class="btn-primary" id="render-btn" style="width:auto;padding:12px 28px">&#9654; Render Final Video</button>
+        <span id="render-status" style="font-size:.82rem;color:#a78bfa"></span>
+      </div>
+
+      <!-- Progress bar -->
+      <div id="render-progress-wrap" style="display:none;margin-top:16px">
+        <div class="render-progress-track">
+          <div class="render-progress-fill" id="render-progress-fill" style="width:0%"></div>
+        </div>
+        <div id="render-progress-label" style="font-size:.78rem;color:#888;text-align:center;margin-top:6px">Initializing…</div>
+      </div>
+
+      <!-- Video player (shown after render) -->
+      <div id="render-player-wrap" style="display:none;margin-top:20px">
+        <video id="render-video" controls playsinline style="width:100%;border-radius:10px;display:block;background:#000"></video>
+        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center">
+          <a id="render-download-btn" class="btn-primary" style="width:auto;padding:10px 24px;text-decoration:none;display:inline-block">&#11015; Download MP4</a>
+          <span style="font-size:.78rem;color:#555">720p preview quality</span>
+        </div>
       </div>
     </div>
 
+    <!-- Secondary: Remotion project ZIP -->
     <div class="remotion-card remotion-instructions">
-      <h2>How to Render Your Video</h2>
-      <ol>
+      <h2>Full Quality: Download Remotion Project</h2>
+      <p style="font-size:.82rem;color:#555;margin-bottom:16px;line-height:1.6">
+        For production-quality 1920&#215;1080 renders, download the Remotion project and render locally with Node.js.
+      </p>
+      <div class="remotion-cta">
+        <button class="btn-primary" id="remotion-download-btn" style="width:auto;padding:12px 28px">&#11015; Download Remotion Project</button>
+        <span id="remotion-dl-status" style="font-size:.82rem;color:#a78bfa"></span>
+      </div>
+      <ol style="margin-top:16px">
         <li>Unzip <code>remotion-video-project.zip</code> and open a terminal inside it</li>
         <li>Install dependencies: <code class="cmd">npm install</code></li>
         <li>Render to MP4: <code class="cmd">npm run render</code></li>
-        <li>Your video is at <code>output.mp4</code> 🎬</li>
+        <li>Your video is at <code>output.mp4</code> &#127916;</li>
       </ol>
       <p style="font-size:.78rem;color:#555;margin-top:14px">
         <strong style="color:#a78bfa">Preview first?</strong> Run <code>npm start</code> to open Remotion Studio at <code>localhost:3000</code> — scrub through frames before committing to a full render.
@@ -1156,7 +1186,7 @@
   document.getElementById('dl-vid-btn').addEventListener('click', () => downloadByType('vid', 'mp4'));
 
   // ══════════════════════════════════════════════════════════════════════════
-  // PHASE 4 — Remotion Render
+  // PHASE 4 — Render
   // ══════════════════════════════════════════════════════════════════════════
 
   document.getElementById('go-render-btn').addEventListener('click', () => {
@@ -1166,8 +1196,122 @@
 
   document.getElementById('back-to-studio-btn').addEventListener('click', () => setStep(3));
 
+  document.getElementById('render-btn').addEventListener('click', async () => {
+    const btn      = document.getElementById('render-btn');
+    const statusEl = document.getElementById('render-status');
+    btn.disabled = true; btn.textContent = 'Rendering…';
+    statusEl.style.color = '#a78bfa'; statusEl.textContent = '';
+    document.getElementById('render-progress-wrap').style.display = '';
+    document.getElementById('render-player-wrap').style.display = 'none';
+    document.getElementById('render-progress-fill').style.width = '0%';
+    try {
+      const blob = await doRender();
+      const url  = URL.createObjectURL(blob);
+      document.getElementById('render-video').src = url;
+      document.getElementById('render-download-btn').href = url;
+      document.getElementById('render-download-btn').download = 'ai-studio-video-720p.mp4';
+      document.getElementById('render-player-wrap').style.display = '';
+      statusEl.textContent = 'Done! Your video is ready.';
+      document.getElementById('render-progress-fill').style.width = '100%';
+      document.getElementById('render-progress-label').textContent = 'Complete!';
+    } catch (err) {
+      statusEl.style.color = '#f08090';
+      statusEl.textContent = 'Error: ' + err.message;
+      console.error('[render]', err);
+    } finally {
+      btn.disabled = false; btn.textContent = '▶ Render Final Video';
+    }
+  });
+
+  async function doRender() {
+    const setProgress = (pct, label) => {
+      document.getElementById('render-progress-fill').style.width = `${Math.min(pct, 100).toFixed(1)}%`;
+      if (label) document.getElementById('render-progress-label').textContent = label;
+    };
+
+    setProgress(2, 'Loading FFmpeg WebAssembly (single-threaded core)…');
+
+    // Dynamic ESM import — single-threaded @ffmpeg/core, no COOP/COEP headers required
+    const { FFmpeg }             = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
+    const { toBlobURL, fetchFile } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
+
+    const ffmpeg = new FFmpeg();
+    ffmpeg.on('log', ({ message }) => console.log('[ffmpeg]', message));
+
+    await ffmpeg.load({
+      coreURL: await toBlobURL(
+        'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js',
+        'text/javascript'
+      ),
+      wasmURL: await toBlobURL(
+        'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.wasm',
+        'application/wasm'
+      ),
+    });
+
+    setProgress(8, 'Writing assets to virtual filesystem…');
+
+    for (let i = 0; i < wfScenes.length; i++) {
+      const a = studioAssets[i] || {};
+      if (a.vid?.blob)  await ffmpeg.writeFile(`s${i}_v.mp4`,                    await fetchFile(a.vid.blob));
+      if (a.img?.blob)  await ffmpeg.writeFile(`s${i}_i.${a.img.ext || 'png'}`,  await fetchFile(a.img.blob));
+      if (a.vo?.blob)   await ffmpeg.writeFile(`s${i}_a.wav`,                    await fetchFile(a.vo.blob));
+    }
+
+    // Encode each scene into a normalised 1280×720 H.264+AAC clip
+    const clipFiles   = [];
+    const sceneCount  = wfScenes.length;
+    for (let i = 0; i < sceneCount; i++) {
+      const scene = wfScenes[i];
+      const a     = studioAssets[i] || {};
+      const dur   = String(scene.duration || 5);
+      const clip  = `clip${i}.mp4`;
+      setProgress(8 + (i / sceneCount) * 80, `Rendering scene ${i + 1} of ${sceneCount}…`);
+
+      const args = [];
+
+      // Visual input
+      if (a.vid?.blob) {
+        args.push('-i', `s${i}_v.mp4`);
+      } else if (a.img?.blob) {
+        args.push('-loop', '1', '-framerate', '30', '-i', `s${i}_i.${a.img.ext || 'png'}`);
+      } else {
+        args.push('-f', 'lavfi', '-i', 'color=c=black:size=1280x720:rate=30');
+      }
+
+      // Audio input (real VO or synthetic silence)
+      if (a.vo?.blob) {
+        args.push('-i', `s${i}_a.wav`);
+      } else {
+        args.push('-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo');
+      }
+
+      args.push(
+        '-map', '0:v:0', '-map', '1:a:0',
+        '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28',
+        '-c:a', 'aac', '-ar', '44100', '-ac', '2',
+        '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1',
+        '-pix_fmt', 'yuv420p',
+        '-t', dur,
+        '-y', clip
+      );
+
+      await ffmpeg.exec(args);
+      clipFiles.push(clip);
+    }
+
+    // Concatenate all clips
+    setProgress(90, 'Concatenating scenes…');
+    await ffmpeg.writeFile('concat.txt', clipFiles.map(f => `file '${f}'`).join('\n'));
+    await ffmpeg.exec(['-f', 'concat', '-safe', '0', '-i', 'concat.txt', '-c', 'copy', '-y', 'output.mp4']);
+
+    setProgress(97, 'Finalizing output…');
+    const data = await ffmpeg.readFile('output.mp4');
+    return new Blob([data.buffer], { type: 'video/mp4' });
+  }
+
   document.getElementById('remotion-download-btn').addEventListener('click', async () => {
-    const btn = document.getElementById('remotion-download-btn');
+    const btn    = document.getElementById('remotion-download-btn');
     const status = document.getElementById('remotion-dl-status');
     btn.disabled = true; btn.textContent = 'Building project…';
     status.textContent = '';

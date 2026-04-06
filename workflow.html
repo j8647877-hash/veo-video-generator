@@ -1016,11 +1016,11 @@
       const imgData = data.images?.[0];
       if (!imgData?.data) throw new Error('No image data returned.');
       const mimeType = imgData.mimeType || 'image/png';
+      const ext      = mimeType.includes('jpeg') ? 'jpg' : 'png';
       const dataUrl  = `data:${mimeType};base64,${imgData.data}`;
       const blob     = base64ToBlob(imgData.data, mimeType);
       if (!studioAssets[i]) studioAssets[i] = {};
       studioAssets[i].img = { blob, url: dataUrl, ext };
-      const ext = mimeType.includes('jpeg') ? 'jpg' : 'png';
       document.getElementById(`wf-imgpreview-${i}`).innerHTML =
         `<img src="${dataUrl}" alt="Scene ${wfScenes[i].sceneNumber}">
          <a href="${dataUrl}" download="scene-${wfScenes[i].sceneNumber}-image.${ext}" class="btn-sm" style="display:inline-block;margin-top:6px">Download ${ext.toUpperCase()}</a>`;

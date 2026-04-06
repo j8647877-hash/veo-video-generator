@@ -147,6 +147,13 @@
     details[open] summary::before { transform:rotate(90deg); }
     details .inner { margin-top:16px;display:flex;flex-direction:column;gap:16px; }
 
+    .custom-input {
+      margin-top: 8px;
+      display: none;
+      animation: fadeIn .15s ease;
+    }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+
     @media (max-width:600px) {
       .grid-2, .grid-3 { grid-template-columns:1fr; }
     }
@@ -222,7 +229,9 @@
             <option value="Corporate Presentation">Corporate Presentation</option>
             <option value="Product Demo">Product Demo</option>
           </optgroup>
+          <option value="_custom_">Custom…</option>
         </select>
+        <input type="text" id="script-type-custom" class="custom-input" placeholder="e.g. Instagram Story, LinkedIn Video…" />
       </div>
 
       <div class="field">
@@ -239,7 +248,9 @@
           <option value="Neutral">Neutral / Informative</option>
           <option value="Energetic">Energetic / Hype</option>
           <option value="Calm and soothing">Calm and Soothing</option>
+          <option value="_custom_">Custom…</option>
         </select>
+        <input type="text" id="tone-custom" class="custom-input" placeholder="e.g. Sarcastic, ASMR, Academic…" />
       </div>
 
       <div class="field">
@@ -255,7 +266,9 @@
           <option value="Tech-savvy viewers">Tech-Savvy Viewers</option>
           <option value="Beginner learners">Beginner Learners</option>
           <option value="Experts and enthusiasts">Experts &amp; Enthusiasts</option>
+          <option value="_custom_">Custom…</option>
         </select>
+        <input type="text" id="audience-custom" class="custom-input" placeholder="e.g. Fitness enthusiasts over 40, DIY homeowners…" />
       </div>
     </div>
 
@@ -263,12 +276,9 @@
       <div class="field">
         <label for="length">Approximate length</label>
         <select id="length">
-          <option value="Very short (15–30 sec)">Very Short — 15–30 sec</option>
-          <option value="Short (60–90 sec)">Short — 60–90 sec</option>
-          <option value="Medium (3–5 min)" selected>Medium — 3–5 min</option>
-          <option value="Long (7–10 min)">Long — 7–10 min</option>
-          <option value="Very long (15–20 min)">Very Long — 15–20 min</option>
+          <!-- options populated dynamically by JS based on script type -->
         </select>
+        <input type="text" id="length-custom" class="custom-input" placeholder="e.g. 45 seconds, 12 minutes…" />
       </div>
 
       <div class="field">
@@ -282,7 +292,9 @@
           <option value="Tutorial / Step-by-step">Tutorial / Step-by-step</option>
           <option value="Documentary narration">Documentary Narration</option>
           <option value="Vlog style">Vlog Style</option>
+          <option value="_custom_">Custom…</option>
         </select>
+        <input type="text" id="format-custom" class="custom-input" placeholder="e.g. Reaction video, Explainer with animations…" />
       </div>
     </div>
 
@@ -297,7 +309,11 @@
           <option value="7">7 scenes</option>
           <option value="8">8 scenes</option>
           <option value="10">10 scenes</option>
+          <option value="12">12 scenes</option>
+          <option value="15">15 scenes</option>
+          <option value="_custom_">Custom…</option>
         </select>
+        <input type="number" id="scene-count-custom" class="custom-input" placeholder="Number of scenes" min="1" max="30" />
       </div>
       <div class="field">
         <label for="scene-duration">Default scene duration (seconds)</label>
@@ -324,7 +340,9 @@
               <option value="Mandarin Chinese">Mandarin Chinese</option>
               <option value="Hindi">Hindi</option>
               <option value="Arabic">Arabic</option>
+              <option value="_custom_">Custom…</option>
             </select>
+            <input type="text" id="language-custom" class="custom-input" placeholder="e.g. Dutch, Swahili, Brazilian Portuguese…" />
           </div>
           <div class="field">
             <label for="model-select">Model</label>
@@ -332,7 +350,9 @@
               <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash — Recommended</option>
               <option value="gemini-2.5-pro">Gemini 2.5 Pro — Highest quality</option>
               <option value="gemini-2.0-flash-001">Gemini 2.0 Flash — Fast &amp; reliable</option>
+              <option value="_custom_">Custom model ID…</option>
             </select>
+            <input type="text" id="model-select-custom" class="custom-input" placeholder="e.g. gemini-2.0-pro-001" />
           </div>
         </div>
       </div>
@@ -413,6 +433,107 @@ Avoid: Overly technical jargon. Passive voice. Filler phrases like 'In conclusio
       document.getElementById('project-id').value = saved;
   })();
 
+  // ── Custom dropdown helper ─────────────────────────────────────────────────
+  // For each select with a "_custom_" option, reveal a text input when chosen.
+  // getFieldValue(id) returns the custom text if chosen, otherwise the select value.
+  function initCustomSelect(selectId) {
+    const sel = document.getElementById(selectId);
+    const inp = document.getElementById(selectId + '-custom');
+    if (!sel || !inp) return;
+    sel.addEventListener('change', () => {
+      const show = sel.value === '_custom_';
+      inp.style.display = show ? '' : 'none';
+      inp.className = show ? 'custom-input' : 'custom-input'; // keep class
+      if (show) inp.focus();
+    });
+  }
+
+  function getFieldValue(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return '';
+    if (sel.value === '_custom_') {
+      const inp = document.getElementById(selectId + '-custom');
+      return inp ? inp.value.trim() : '';
+    }
+    return sel.value;
+  }
+
+  // Initialise all custom selects
+  ['script-type','tone','audience','length','format','scene-count','language','model-select'].forEach(initCustomSelect);
+
+  // ── Dynamic length options + scene duration ────────────────────────────────
+  const LENGTH_PRESETS = {
+    // Short-form vertical / social
+    'YouTube Short':           [['Very short (15–30 sec)','Very Short — 15–30 sec',true],['Short (30–60 sec)','Short — 30–60 sec'],['Standard (60 sec)','Standard — 60 sec']],
+    'TikTok / Reel':           [['Very short (15–30 sec)','Very Short — 15–30 sec',true],['Short (30–60 sec)','Short — 30–60 sec'],['Standard (60–90 sec)','Standard — 60–90 sec']],
+    // Spots & trailers
+    'Movie Trailer':           [['Teaser (15–30 sec)','Teaser — 15–30 sec',true],['Short (60–90 sec)','Short — 60–90 sec'],['Full trailer (2–3 min)','Full Trailer — 2–3 min']],
+    'Advertisement':           [['15-sec spot','15-sec Spot',true],['30-sec spot','30-sec Spot'],['60-sec spot','60-sec Spot'],['Long form (2–3 min)','Long Form — 2–3 min']],
+    // Long-form / broadcast
+    'Short Film':              [['Short (5–10 min)','Short — 5–10 min',true],['Medium (15–25 min)','Medium — 15–25 min'],['Long (30–45 min)','Long — 30–45 min']],
+    'TV Episode':              [['Short (10–15 min)','Short — 10–15 min'],['Standard (22 min)','Standard — 22 min',true],['Long (44 min)','Long — 44 min'],['Feature (60+ min)','Feature — 60+ min']],
+    'Documentary':             [['Short (10–20 min)','Short — 10–20 min'],['Medium (30–45 min)','Medium — 30–45 min',true],['Feature (60–90 min)','Feature — 60–90 min']],
+    'Web Series Episode':      [['Short (5–10 min)','Short — 5–10 min'],['Medium (15–20 min)','Medium — 15–20 min',true],['Long (25–35 min)','Long — 25–35 min']],
+    'Corporate Presentation':  [['Short (5–10 min)','Short — 5–10 min'],['Medium (15–20 min)','Medium — 15–20 min',true],['Long (30–45 min)','Long — 30–45 min']],
+  };
+
+  // Default for standard online content (YouTube Video, Podcast, Educational, Product Demo)
+  const DEFAULT_LENGTHS = [
+    ['Short (60–90 sec)','Short — 60–90 sec'],
+    ['Medium (3–5 min)','Medium — 3–5 min',true],
+    ['Long (7–10 min)','Long — 7–10 min'],
+    ['Very long (15–20 min)','Very Long — 15–20 min'],
+  ];
+
+  // Scene duration recommendations per script type [suggestedValue, min, max]
+  const SCENE_DURATION_MAP = {
+    'YouTube Short':  [6,  3, 20],
+    'TikTok / Reel':  [5,  3, 15],
+    'Movie Trailer':  [4,  3, 12],
+    'Advertisement':  [5,  3, 15],
+    'Short Film':     [12, 5, 60],
+    'TV Episode':     [15, 8, 90],
+    'Documentary':    [18, 8, 120],
+    'Web Series Episode': [12, 5, 60],
+    'Corporate Presentation': [15, 5, 60],
+  };
+  const DEFAULT_SCENE_DURATION = [10, 5, 60];
+
+  function syncLengthAndDuration() {
+    const type = getFieldValue('script-type');
+    const lengthSel = document.getElementById('length');
+    const rows = LENGTH_PRESETS[type] || DEFAULT_LENGTHS;
+
+    // Rebuild length options
+    lengthSel.innerHTML = '';
+    rows.forEach(([val, label, selected]) => {
+      const opt = document.createElement('option');
+      opt.value = val; opt.textContent = label;
+      if (selected) opt.selected = true;
+      lengthSel.appendChild(opt);
+    });
+    // Add custom option
+    const cOpt = document.createElement('option');
+    cOpt.value = '_custom_'; cOpt.textContent = 'Custom…';
+    lengthSel.appendChild(cOpt);
+    // Hide custom input (in case it was open)
+    const ci = document.getElementById('length-custom');
+    if (ci) ci.style.display = 'none';
+
+    // Adjust scene duration field
+    const durInput = document.getElementById('scene-duration');
+    if (durInput) {
+      const [val, min, max] = SCENE_DURATION_MAP[type] || DEFAULT_SCENE_DURATION;
+      durInput.min   = min;
+      durInput.max   = max;
+      durInput.value = val;
+    }
+  }
+
+  // Run on load and when script type changes
+  syncLengthAndDuration();
+  document.getElementById('script-type').addEventListener('change', syncLengthAndDuration);
+
   // ── Char counter ──────────────────────────────────────────────────────────
   const promptArea = document.getElementById('script-prompt');
   const charCount  = document.getElementById('char-count');
@@ -476,13 +597,13 @@ Avoid: Overly technical jargon. Passive voice. Filler phrases like 'In conclusio
       prompt,
       projectId,
       systemPrompt : document.getElementById('system-prompt').value,
-      scriptType   : document.getElementById('script-type').value,
-      tone         : document.getElementById('tone').value,
-      audience     : document.getElementById('audience').value,
-      length       : document.getElementById('length').value,
-      format       : document.getElementById('format').value,
-      language     : document.getElementById('language').value,
-      model        : document.getElementById('model-select').value,
+      scriptType   : getFieldValue('script-type'),
+      tone         : getFieldValue('tone'),
+      audience     : getFieldValue('audience'),
+      length       : getFieldValue('length'),
+      format       : getFieldValue('format'),
+      language     : getFieldValue('language'),
+      model        : getFieldValue('model-select'),
     };
 
     if (!projectId) {
@@ -579,7 +700,7 @@ Avoid: Overly technical jargon. Passive voice. Filler phrases like 'In conclusio
   // ── Send to Workflow ──────────────────────────────────────────────────────
   workflowBtn.addEventListener('click', () => {
     sessionStorage.setItem('workflow_script', rawText);
-    sessionStorage.setItem('workflow_scene_count', document.getElementById('scene-count').value);
+    sessionStorage.setItem('workflow_scene_count', getFieldValue('scene-count'));
     sessionStorage.setItem('workflow_scene_duration', document.getElementById('scene-duration').value);
     window.location.href = '/workflow';
   });

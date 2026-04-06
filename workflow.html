@@ -97,6 +97,9 @@
     .grid-2 { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
     .note { font-size:.78rem;color:#555;line-height:1.5;margin-top:4px; }
 
+    .custom-input { margin-top:8px;display:none;animation:fadeIn .15s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)} }
+
     /* ── Buttons ── */
     .btn-primary {
       width:100%;padding:14px 28px;
@@ -319,7 +322,11 @@
             <option value="7">7 scenes</option>
             <option value="8">8 scenes</option>
             <option value="10">10 scenes</option>
+            <option value="12">12 scenes</option>
+            <option value="15">15 scenes</option>
+            <option value="_custom_">Custom…</option>
           </select>
+          <input type="number" id="wf-scene-count-custom" class="custom-input" placeholder="Number of scenes" min="1" max="30" />
         </div>
         <div class="field">
           <label for="wf-scene-duration">Default scene duration (s)</label>
@@ -341,12 +348,16 @@
               <label for="wf-ai-type">Script type</label>
               <select id="wf-ai-type">
                 <option value="YouTube Video" selected>YouTube Video</option>
+                <option value="YouTube Short">YouTube Short</option>
+                <option value="TikTok / Reel">TikTok / Reel</option>
                 <option value="Short Film">Short Film</option>
                 <option value="Documentary">Documentary</option>
                 <option value="Advertisement">Advertisement</option>
                 <option value="Educational Video">Educational Video</option>
                 <option value="Product Demo">Product Demo</option>
+                <option value="_custom_">Custom…</option>
               </select>
+              <input type="text" id="wf-ai-type-custom" class="custom-input" placeholder="e.g. Instagram Story, LinkedIn Video…" />
             </div>
             <div class="field">
               <label for="wf-ai-tone">Tone</label>
@@ -357,7 +368,12 @@
                 <option value="Inspirational">Inspirational</option>
                 <option value="Energetic">Energetic / Hype</option>
                 <option value="Calm and soothing">Calm &amp; Soothing</option>
+                <option value="Humorous">Humorous / Comedy</option>
+                <option value="Dramatic">Dramatic</option>
+                <option value="Storytelling">Storytelling / Narrative</option>
+                <option value="_custom_">Custom…</option>
               </select>
+              <input type="text" id="wf-ai-tone-custom" class="custom-input" placeholder="e.g. Sarcastic, ASMR, Academic…" />
             </div>
           </div>
           <button class="btn-secondary" id="wf-write-ai-btn">Write with AI</button>
@@ -473,7 +489,14 @@
     const wfCount = sessionStorage.getItem('workflow_scene_count');
     if (wfCount) {
       const sel = document.getElementById('wf-scene-count');
-      for (let o of sel.options) if (o.value === wfCount) { o.selected = true; break; }
+      let matched = false;
+      for (let o of sel.options) if (o.value === wfCount) { o.selected = true; matched = true; break; }
+      if (!matched) {
+        // Value came from a custom input — select Custom and pre-fill
+        sel.value = '_custom_';
+        const inp = document.getElementById('wf-scene-count-custom');
+        if (inp) { inp.value = wfCount; inp.style.display = ''; }
+      }
       sessionStorage.removeItem('workflow_scene_count');
     }
     const wfDur = sessionStorage.getItem('workflow_scene_duration');
@@ -482,6 +505,51 @@
       sessionStorage.removeItem('workflow_scene_duration');
     }
   })();
+
+  // ── Custom dropdown helpers ───────────────────────────────────────────────
+  function initCustomSelect(selectId) {
+    const sel = document.getElementById(selectId);
+    const inp = document.getElementById(selectId + '-custom');
+    if (!sel || !inp) return;
+    sel.addEventListener('change', () => {
+      const show = sel.value === '_custom_';
+      inp.style.display = show ? '' : 'none';
+      if (show) inp.focus();
+    });
+  }
+
+  function getWfFieldValue(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return '';
+    if (sel.value === '_custom_') {
+      const inp = document.getElementById(selectId + '-custom');
+      return inp ? inp.value.trim() : '';
+    }
+    return sel.value;
+  }
+
+  ['wf-scene-count','wf-ai-type','wf-ai-tone'].forEach(initCustomSelect);
+
+  // Scene duration presets (same as script.html) — adjust when AI type changes
+  const WF_SCENE_DURATION_MAP = {
+    'YouTube Short': [6, 3, 20],
+    'TikTok / Reel': [5, 3, 15],
+    'Movie Trailer':  [4, 3, 12],
+    'Advertisement':  [5, 3, 15],
+    'Short Film':     [12, 5, 60],
+    'TV Episode':     [15, 8, 90],
+    'Documentary':    [18, 8, 120],
+  };
+
+  function syncWfSceneDuration() {
+    const type = getWfFieldValue('wf-ai-type');
+    const durInput = document.getElementById('wf-scene-duration');
+    if (!durInput) return;
+    const [val, min, max] = WF_SCENE_DURATION_MAP[type] || [10, 3, 60];
+    durInput.min = min; durInput.max = max; durInput.value = val;
+  }
+
+  document.getElementById('wf-ai-type').addEventListener('change', syncWfSceneDuration);
 
   // ── Utilities ─────────────────────────────────────────────────────────────
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -556,8 +624,8 @@
     const payload = {
       prompt: brief,
       projectId,
-      scriptType: document.getElementById('wf-ai-type').value,
-      tone:       document.getElementById('wf-ai-tone').value,
+      scriptType: getWfFieldValue('wf-ai-type'),
+      tone:       getWfFieldValue('wf-ai-tone'),
       length:     'Medium (3–5 min)',
       format:     'Single Narrator',
       language:   'English',

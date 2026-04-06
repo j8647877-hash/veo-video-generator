@@ -154,6 +154,49 @@
     }
     @keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
 
+    /* ── Asset mode selector ── */
+    .asset-mode-wrap { margin-bottom: 20px; }
+    .asset-mode-label { font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#666;margin-bottom:10px; }
+    .asset-mode-group {
+      display: flex;
+      background: #111118;
+      border: 1px solid #2e2e42;
+      border-radius: 9px;
+      padding: 3px;
+      gap: 3px;
+    }
+    .asset-mode-btn {
+      flex: 1;
+      padding: 9px 10px;
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      color: #666;
+      font-size: .83rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+      font-family: inherit;
+      text-align: center;
+      line-height: 1.3;
+    }
+    .asset-mode-btn:hover { color: #aaa; }
+    .asset-mode-btn.active {
+      background: linear-gradient(135deg, #a78bfa18, #f472b612);
+      border-color: #a78bfa50;
+      color: #e8e8f0;
+    }
+    .asset-mode-btn .mode-icon { font-size: 1rem; display:block; margin-bottom:3px; }
+    .asset-mode-note {
+      font-size: .75rem;
+      color: #555;
+      margin-top: 8px;
+      line-height: 1.5;
+      min-height: 1.2em;
+      transition: color .2s;
+    }
+    .asset-mode-note.has-limit { color: #f5a623; }
+
     @media (max-width:600px) {
       .grid-2, .grid-3 { grid-template-columns:1fr; }
     }
@@ -205,6 +248,23 @@
   <!-- ── Script parameters ─────────────────────────────────────────────────── -->
   <div class="card">
     <h2>Script Parameters</h2>
+
+    <!-- Asset mode -->
+    <div class="asset-mode-wrap">
+      <div class="asset-mode-label">Visual Asset Type</div>
+      <div class="asset-mode-group" id="asset-mode-group">
+        <button class="asset-mode-btn active" data-mode="images">
+          <span class="mode-icon">🖼</span>Images Only
+        </button>
+        <button class="asset-mode-btn" data-mode="both">
+          <span class="mode-icon">🖼+🎬</span>Images + Video
+        </button>
+        <button class="asset-mode-btn" data-mode="video">
+          <span class="mode-icon">🎬</span>Video Clips Only
+        </button>
+      </div>
+      <div class="asset-mode-note" id="asset-mode-note">Images only — scenes can be any length.</div>
+    </div>
 
     <div class="grid-3" style="margin-bottom:16px">
       <div class="field">
@@ -534,6 +594,49 @@ Avoid: Overly technical jargon. Passive voice. Filler phrases like 'In conclusio
   syncLengthAndDuration();
   document.getElementById('script-type').addEventListener('change', syncLengthAndDuration);
 
+  // ── Asset mode selector ───────────────────────────────────────────────────
+  let currentAssetMode = 'images'; // 'images' | 'video' | 'both'
+
+  const ASSET_MODE_NOTES = {
+    images: 'Images only — scenes can be any length.',
+    both:   'Images + Video — scenes with video clips must be 8 seconds or less. The AI will mark which is which.',
+    video:  'Video clips only — every scene will be written to fit within 8 seconds. ⚠ Scene duration is capped at 8s.',
+  };
+
+  function applyAssetMode(mode) {
+    currentAssetMode = mode;
+    // Update button states
+    document.querySelectorAll('#asset-mode-group .asset-mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+    // Update note
+    const noteEl = document.getElementById('asset-mode-note');
+    noteEl.textContent = ASSET_MODE_NOTES[mode];
+    noteEl.className = 'asset-mode-note' + (mode !== 'images' ? ' has-limit' : '');
+
+    // Sync scene duration cap
+    const durInput = document.getElementById('scene-duration');
+    if (durInput) {
+      if (mode === 'video') {
+        durInput.max = 8;
+        if (parseInt(durInput.value) > 8) durInput.value = 6;
+        else if (!durInput.value || parseInt(durInput.value) < 3) durInput.value = 6;
+      } else if (mode === 'both') {
+        durInput.max = 8;
+        if (parseInt(durInput.value) > 8) durInput.value = 7;
+      } else {
+        // Restore the script-type-appropriate max
+        const type = getFieldValue('script-type');
+        const [, , max] = SCENE_DURATION_MAP[type] || DEFAULT_SCENE_DURATION;
+        durInput.max = max;
+      }
+    }
+  }
+
+  document.querySelectorAll('#asset-mode-group .asset-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyAssetMode(btn.dataset.mode));
+  });
+
   // ── Char counter ──────────────────────────────────────────────────────────
   const promptArea = document.getElementById('script-prompt');
   const charCount  = document.getElementById('char-count');
@@ -604,6 +707,7 @@ Avoid: Overly technical jargon. Passive voice. Filler phrases like 'In conclusio
       format       : getFieldValue('format'),
       language     : getFieldValue('language'),
       model        : getFieldValue('model-select'),
+      assetMode    : currentAssetMode,
     };
 
     if (!projectId) {

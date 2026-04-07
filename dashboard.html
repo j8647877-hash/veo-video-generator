@@ -108,7 +108,7 @@
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 24px;
       width: 100%;
-      max-width: 760px;
+      max-width: 960px;
     }
 
     .tool-card {
@@ -160,6 +160,8 @@
     .tool-icon.script { background: linear-gradient(135deg, #a78bfa30, #f472b620); }
     .tool-icon.agent    { background: linear-gradient(135deg, #f5a62330, #ff6b3520); }
     .tool-icon.workflow { background: linear-gradient(135deg, #6ee7f730, #a78bfa20); }
+    .tool-icon.cloner   { background: linear-gradient(135deg, #4ade8030, #22d3ee20); }
+    .tool-icon.assets   { background: linear-gradient(135deg, #22d3ee30, #4ade8020); }
 
     .tool-icon svg { width: 26px; height: 26px; }
     .tool-icon.video    svg { stroke: #7c6af7; }
@@ -168,6 +170,8 @@
     .tool-icon.script   svg { stroke: #a78bfa; }
     .tool-icon.agent    svg { stroke: #f5a623; }
     .tool-icon.workflow svg { stroke: #6ee7f7; }
+    .tool-icon.cloner   svg { stroke: #4ade80; }
+    .tool-icon.assets   svg { stroke: #22d3ee; }
 
     .tool-body { flex: 1; }
 
@@ -316,6 +320,41 @@
       </div>
       <div class="tool-footer">
         <span class="tool-tag">Gemini + Veo + TTS</span>
+        <span class="tool-arrow">→</span>
+      </div>
+    </a>
+
+    <a href="/style-cloner" class="tool-card">
+      <div class="tool-icon cloner">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+          <polyline points="10 17 15 12 10 7"/>
+          <line x1="15" y1="12" x2="3" y2="12"/>
+        </svg>
+      </div>
+      <div class="tool-body">
+        <h2>Style Cloner</h2>
+        <p>Upload a video or paste a YouTube URL. Gemini extracts the visual style and saves it as a reusable template.</p>
+      </div>
+      <div class="tool-footer">
+        <span class="tool-tag">Gemini Vision</span>
+        <span class="tool-arrow">→</span>
+      </div>
+    </a>
+
+    <a href="/assets" class="tool-card">
+      <div class="tool-icon assets">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+          <line x1="7" y1="7" x2="7.01" y2="7"/>
+        </svg>
+      </div>
+      <div class="tool-body">
+        <h2>Style Library</h2>
+        <p>Browse your saved visual style templates. Select one to instantly apply it to any new video in the Workflow.</p>
+      </div>
+      <div class="tool-footer">
+        <span class="tool-tag">GCS Storage</span>
         <span class="tool-arrow">→</span>
       </div>
     </a>

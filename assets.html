@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Style Library — AI Studio</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f0f13;
+      color: #e8e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 28px; border-bottom:1px solid #1e1e2a;
+      background:#0f0f13; position:sticky; top:0; z-index:10;
+    }
+    .back-btn { display:flex;align-items:center;gap:6px;color:#666;font-size:.875rem;text-decoration:none;transition:color .2s; }
+    .back-btn:hover { color:#e8e8f0; }
+    .user-chip { display:flex;align-items:center;gap:8px;background:#1a1a24;border:1px solid #2a2a3a;border-radius:20px;padding:5px 12px;font-size:.82rem;color:#aaa; }
+    .user-dot  { width:7px;height:7px;background:#4caf6e;border-radius:50%; }
+    .btn-sign-out { background:none;border:none;color:#555;font-size:.78rem;cursor:pointer;font-family:inherit;margin-left:4px;transition:color .2s; }
+    .btn-sign-out:hover { color:#e8e8f0; }
+
+    .page-body { flex:1; display:flex; flex-direction:column; align-items:center; padding:40px 20px; }
+    .container  { width:100%; max-width:960px; display:flex; flex-direction:column; gap:28px; }
+
+    header { text-align:center; }
+    header h1 {
+      font-size:2rem; font-weight:700;
+      background:linear-gradient(135deg,#4ade80,#22d3ee);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      background-clip:text; letter-spacing:-0.02em;
+    }
+    header p { margin-top:8px; color:#888; font-size:.95rem; }
+
+    .toolbar {
+      display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+    }
+
+    .btn-primary {
+      padding:10px 22px;
+      background:linear-gradient(135deg,#4ade80,#22d3ee);
+      border:none; border-radius:9px; color:#0f0f13; font-size:.9rem; font-weight:700;
+      cursor:pointer; transition:opacity .2s; text-decoration:none; display:inline-flex; align-items:center; gap:7px;
+    }
+    .btn-primary:hover { opacity:.88; }
+
+    .btn-secondary {
+      padding:8px 16px; background:#1e1e2e; border:1px solid #3a3a54; border-radius:8px;
+      color:#c0c0d8; font-size:.82rem; font-weight:500; cursor:pointer;
+      transition:background .2s,border-color .2s; font-family:inherit;
+    }
+    .btn-secondary:hover { background:#25253a; border-color:#22d3ee; color:#e8e8f0; }
+
+    .btn-danger {
+      padding:7px 14px; background:none; border:1px solid #4a1a28; border-radius:7px;
+      color:#f08090; font-size:.78rem; cursor:pointer; transition:all .2s; font-family:inherit;
+    }
+    .btn-danger:hover { background:#1f0f14; border-color:#f08090; }
+
+    /* ── Loading / empty states ── */
+    .loading-state { text-align:center; padding:60px 20px; color:#555; }
+    .loading-state .spinner {
+      display:inline-block; width:22px; height:22px;
+      border:2px solid #22d3ee; border-top-color:transparent;
+      border-radius:50%; animation:spin .8s linear infinite; margin-bottom:16px;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    .empty-state {
+      text-align:center; padding:80px 20px; background:#1a1a24;
+      border:1px solid #2a2a3a; border-radius:16px;
+    }
+    .empty-state svg { opacity:.25; margin-bottom:20px; }
+    .empty-state h3  { font-size:1.1rem; font-weight:600; color:#666; margin-bottom:8px; }
+    .empty-state p   { font-size:.875rem; color:#555; margin-bottom:20px; }
+
+    /* ── Style grid ── */
+    .styles-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(280px,1fr));
+      gap:20px;
+    }
+
+    .style-card {
+      background:#1a1a24; border:1px solid #2a2a3a; border-radius:14px;
+      overflow:hidden; display:flex; flex-direction:column;
+      transition:border-color .2s, box-shadow .2s;
+    }
+    .style-card:hover { border-color:#22d3ee50; box-shadow:0 4px 20px rgba(34,211,238,.08); }
+
+    .style-card-thumb {
+      width:100%; aspect-ratio:16/9;
+      background:linear-gradient(135deg,#1a1a2a,#111118);
+      position:relative; overflow:hidden; flex-shrink:0;
+    }
+    .style-card-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+    .style-card-thumb .no-thumb {
+      width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+      opacity:.2;
+    }
+
+    .style-card-aspect {
+      position:absolute; top:8px; right:8px;
+      background:#000a; color:#e8e8f0; font-size:.68rem; font-weight:600;
+      border-radius:4px; padding:2px 7px;
+    }
+    .style-card-source {
+      position:absolute; top:8px; left:8px;
+      background:#000a; color:#aaa; font-size:.65rem;
+      border-radius:4px; padding:2px 7px;
+    }
+
+    .style-card-body { padding:16px; flex:1; display:flex; flex-direction:column; gap:10px; }
+
+    .style-card-name { font-size:1rem; font-weight:600; color:#e8e8f0; line-height:1.3; }
+    .style-card-id   { font-size:.68rem; color:#444; font-family:monospace; margin-top:2px; }
+    .style-card-desc { font-size:.8rem; color:#666; line-height:1.55; flex:1; }
+
+    .color-row { display:flex; gap:5px; align-items:center; }
+    .color-chip {
+      width:20px; height:20px; border-radius:50%;
+      border:1px solid #ffffff15; flex-shrink:0; cursor:default;
+    }
+    .color-chip-more { font-size:.7rem; color:#555; }
+
+    .style-card-date { font-size:.72rem; color:#444; }
+
+    .style-card-actions { display:flex; gap:8px; flex-wrap:wrap; padding:12px 16px 16px; }
+    .use-in-workflow-btn {
+      flex:1; padding:8px 14px;
+      background:linear-gradient(135deg,#4ade8020,#22d3ee14);
+      border:1px solid #22d3ee40; border-radius:8px;
+      color:#22d3ee; font-size:.82rem; font-weight:600; cursor:pointer;
+      transition:all .2s; font-family:inherit; text-align:center;
+    }
+    .use-in-workflow-btn:hover { background:linear-gradient(135deg,#4ade8030,#22d3ee20); border-color:#22d3ee80; }
+
+    /* ── Delete confirm overlay ── */
+    .delete-confirm {
+      display:none; position:fixed; inset:0; background:#000a;
+      z-index:100; align-items:center; justify-content:center; padding:20px;
+    }
+    .delete-confirm.visible { display:flex; }
+    .delete-dialog {
+      background:#1a1a24; border:1px solid #4a1a28; border-radius:14px;
+      padding:28px; max-width:360px; width:100%; text-align:center;
+    }
+    .delete-dialog h3 { font-size:1rem; font-weight:600; color:#f08090; margin-bottom:8px; }
+    .delete-dialog p  { font-size:.875rem; color:#888; margin-bottom:20px; }
+    .delete-dialog .btns { display:flex; gap:10px; justify-content:center; }
+
+    .toast {
+      position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px);
+      background:#22d3ee; color:#0f0f13; font-size:.875rem; font-weight:600;
+      border-radius:9px; padding:10px 22px;
+      transition:transform .3s ease, opacity .3s ease; opacity:0; z-index:200;
+    }
+    .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="/dashboard" class="back-btn">← Dashboard</a>
+  <div class="user-chip">
+    <span class="user-dot"></span>
+    <span id="user-email">…</span>
+    <button class="btn-sign-out" id="sign-out-btn">Sign out</button>
+  </div>
+</nav>
+
+<div class="page-body">
+<div class="container">
+
+  <header>
+    <h1>Style Library</h1>
+    <p>Your cloned visual style templates — select one to use in the Production Workflow.</p>
+  </header>
+
+  <div class="toolbar">
+    <span id="style-count" style="font-size:.875rem;color:#555"></span>
+    <a href="/style-cloner" class="btn-primary">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Clone New Style
+    </a>
+  </div>
+
+  <div id="styles-container">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading styles…</p>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Delete confirm dialog -->
+<div class="delete-confirm" id="delete-confirm">
+  <div class="delete-dialog">
+    <h3>Delete Style?</h3>
+    <p id="delete-confirm-name">This style template will be permanently deleted from your library.</p>
+    <div class="btns">
+      <button class="btn-secondary" onclick="cancelDelete()">Cancel</button>
+      <button class="btn-danger" id="confirm-delete-btn" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const token = sessionStorage.getItem('access_token');
+  if (!token) window.location.href = '/';
+
+  function getEmail() {
+    const t = sessionStorage.getItem('id_token');
+    if (!t) return null;
+    try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email || null; }
+    catch { return null; }
+  }
+  document.getElementById('user-email').textContent = getEmail() || 'Signed in';
+  document.getElementById('sign-out-btn').addEventListener('click', () => { sessionStorage.clear(); window.location.href = '/'; });
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let styles = [];
+  let pendingDeleteId  = null;
+  let pendingDeleteObj = null;
+
+  // ── Load styles ───────────────────────────────────────────────────────────
+  async function loadStyles() {
+    const container = document.getElementById('styles-container');
+    try {
+      const res = await fetch('/api/styles', { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Status ${res.status}`);
+      styles = data.styles || [];
+      renderStyles();
+    } catch (err) {
+      container.innerHTML = `<div class="empty-state"><h3>Could not load styles</h3><p>${escHtml(err.message)}</p></div>`;
+    }
+  }
+
+  function renderStyles() {
+    const container = document.getElementById('styles-container');
+    const countEl   = document.getElementById('style-count');
+
+    countEl.textContent = styles.length === 0 ? '' :
+      `${styles.length} style template${styles.length !== 1 ? 's' : ''}`;
+
+    if (styles.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+            <line x1="9" y1="9" x2="9.01" y2="9"/>
+            <line x1="15" y1="9" x2="15.01" y2="9"/>
+          </svg>
+          <h3>No styles yet</h3>
+          <p>Clone a video's visual style to create reusable templates for your videos.</p>
+          <a href="/style-cloner" class="btn-primary" style="display:inline-flex;text-decoration:none">Clone Your First Style</a>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = `<div class="styles-grid">${styles.map(renderCard).join('')}</div>`;
+  }
+
+  function renderCard(s) {
+    const thumbHtml = s.thumbnail
+      ? `<img src="data:image/jpeg;base64,${s.thumbnail}" alt="${escHtml(s.styleName)}" loading="lazy" />`
+      : `<div class="no-thumb"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+
+    const colors = (s.colorPalette || []).slice(0, 6);
+    const colorDots = colors.map(c => `<div class="color-chip" style="background:${escHtml(c.hex||'#888')}" title="${escHtml(c.role||c.name||'')}"></div>`).join('');
+    const moreColors = (s.colorPalette||[]).length > 6 ? `<span class="color-chip-more">+${(s.colorPalette||[]).length - 6}</span>` : '';
+
+    const dateStr = s.createdAt ? new Date(s.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+    const sourceLabel = s.sourceType === 'youtube' ? 'YouTube' : (s.sourceName ? 'Upload' : '');
+
+    const objectName = `styles/${s.id}.json`;
+
+    return `
+      <div class="style-card" id="card-${escHtml(s.id)}">
+        <div class="style-card-thumb">
+          ${thumbHtml}
+          <span class="style-card-aspect">${escHtml(s.aspectRatio||'16:9')}</span>
+          ${sourceLabel ? `<span class="style-card-source">${escHtml(sourceLabel)}</span>` : ''}
+        </div>
+        <div class="style-card-body">
+          <div>
+            <div class="style-card-name">${escHtml(s.styleName||'Unnamed Style')}</div>
+          </div>
+          <div class="style-card-desc">${escHtml((s.coreIdentity||'').slice(0,160))}${(s.coreIdentity||'').length>160?'…':''}</div>
+          ${colors.length ? `<div class="color-row">${colorDots}${moreColors}</div>` : ''}
+          <div style="display:flex;flex-wrap:wrap;gap:5px">
+            ${(s.signatureElements||[]).slice(0,3).map(e=>`<span style="background:#111118;border:1px solid #2e2e42;border-radius:4px;padding:2px 7px;font-size:.68rem;color:#666">${escHtml(e)}</span>`).join('')}
+          </div>
+          ${dateStr ? `<div class="style-card-date">Created ${dateStr}</div>` : ''}
+        </div>
+        <div class="style-card-actions">
+          <button class="use-in-workflow-btn" onclick="useInWorkflow('${escHtml(s.id)}')">Use in Workflow →</button>
+          <button class="btn-danger" onclick="deleteStyle('${escHtml(s.id)}','${escHtml(objectName)}','${escHtml(s.styleName||'this style')}')">Delete</button>
+        </div>
+      </div>
+    `;
+  }
+
+  // ── Use in workflow ───────────────────────────────────────────────────────
+  function useInWorkflow(styleId) {
+    sessionStorage.setItem('workflow_style_id', styleId);
+    window.location.href = '/workflow';
+  }
+
+  // ── Delete flow ───────────────────────────────────────────────────────────
+  function deleteStyle(id, objectName, name) {
+    pendingDeleteId  = id;
+    pendingDeleteObj = objectName;
+    document.getElementById('delete-confirm-name').textContent = `"${name}" will be permanently deleted.`;
+    document.getElementById('delete-confirm').classList.add('visible');
+  }
+
+  function cancelDelete() {
+    pendingDeleteId  = null;
+    pendingDeleteObj = null;
+    document.getElementById('delete-confirm').classList.remove('visible');
+  }
+
+  async function confirmDelete() {
+    if (!pendingDeleteObj) return;
+    const btn = document.getElementById('confirm-delete-btn');
+    btn.disabled = true; btn.textContent = 'Deleting…';
+
+    try {
+      const res = await fetch(`/api/styles?id=${encodeURIComponent(pendingDeleteObj)}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || `Status ${res.status}`);
+      }
+
+      // Remove from local array and re-render
+      styles = styles.filter(s => s.id !== pendingDeleteId);
+      renderStyles();
+      showToast('Style deleted');
+    } catch (err) {
+      showToast('Delete failed: ' + err.message);
+    }
+
+    cancelDelete();
+    btn.disabled = false; btn.textContent = 'Delete';
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  loadStyles();
+</script>
+</body>
+</html>

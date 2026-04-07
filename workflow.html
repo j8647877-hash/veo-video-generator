@@ -155,11 +155,42 @@
     @keyframes spin { to { transform:rotate(360deg); } }
 
     /* ══════════════════════════════════
-       PHASE 1 — Script
+       PHASE 0 — Style Selection
     ══════════════════════════════════ */
-    #phase1 { display:flex;flex-direction:column;gap:24px; }
-    #phase2, #phase3, #phase4 { display:none; flex-direction:column; gap:24px; }
+    #phase0 { display:flex;flex-direction:column;gap:24px; }
+    #phase1, #phase2, #phase3, #phase4 { display:none; flex-direction:column; gap:24px; }
     #phase2.active, #phase3.active, #phase4.active { display:flex; }
+
+    /* Style cards grid */
+    .style-selector-grid {
+      display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:12px;
+    }
+    .style-selector-card {
+      background:#111118;border:2px solid #2a2a3a;border-radius:12px;overflow:hidden;
+      cursor:pointer;transition:border-color .2s,box-shadow .2s;display:flex;flex-direction:column;
+    }
+    .style-selector-card:hover   { border-color:#4ade8060; box-shadow:0 4px 16px rgba(74,222,128,.08); }
+    .style-selector-card.selected { border-color:#4ade80; box-shadow:0 0 0 3px #4ade8020; }
+    .style-selector-thumb {
+      width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,#1a1a2a,#111118);
+      overflow:hidden;flex-shrink:0;position:relative;
+    }
+    .style-selector-thumb img { width:100%;height:100%;object-fit:cover;display:block; }
+    .style-selector-thumb .no-thumb { width:100%;height:100%;display:flex;align-items:center;justify-content:center;opacity:.2; }
+    .style-selector-body { padding:11px 13px;flex:1; }
+    .style-selector-name { font-size:.87rem;font-weight:600;color:#e8e8f0;margin-bottom:4px;line-height:1.3; }
+    .style-selector-desc { font-size:.73rem;color:#555;line-height:1.45; }
+    .style-color-dots { display:flex;gap:4px;margin-top:7px; }
+    .style-dot { width:12px;height:12px;border-radius:50%;border:1px solid #ffffff10; }
+
+    /* Selected style badge shown in Phase 3 */
+    .style-badge {
+      display:inline-flex;align-items:center;gap:6px;
+      background:linear-gradient(135deg,#4ade8018,#22d3ee12);
+      border:1px solid #4ade8040;border-radius:7px;
+      padding:5px 11px;font-size:.78rem;color:#4ade80;font-weight:500;
+    }
+    .style-badge-dot { width:6px;height:6px;background:#4ade80;border-radius:50%;flex-shrink:0; }
 
     #script-output-display {
       background:#111118;border:1px solid #2e2e42;border-radius:10px;
@@ -314,13 +345,59 @@
 
   <!-- Stepper -->
   <div class="stepper">
-    <div class="step active" id="step1"><span class="step-num">1</span> Script</div>
+    <div class="step active" id="step0"><span class="step-num" style="font-size:.6rem">✦</span> Style</div>
+    <div class="step-sep"></div>
+    <div class="step" id="step1"><span class="step-num">1</span> Script</div>
     <div class="step-sep"></div>
     <div class="step" id="step2"><span class="step-num">2</span> Review Scenes</div>
     <div class="step-sep"></div>
     <div class="step" id="step3"><span class="step-num">3</span> Asset Studio</div>
     <div class="step-sep"></div>
     <div class="step" id="step4"><span class="step-num">4</span> Render</div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       PHASE 0 — Visual Style (optional)
+  ══════════════════════════════════ -->
+  <div id="phase0">
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+        <h2 style="margin-bottom:0">Visual Style <span style="background:#111118;border:1px solid #2e2e42;border-radius:4px;padding:1px 7px;font-size:.7rem;color:#555;font-weight:400;letter-spacing:.04em;vertical-align:middle;margin-left:6px">Optional</span></h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <a href="/style-cloner" target="_blank" style="font-size:.78rem;color:#22d3ee;text-decoration:none">+ Clone New Style</a>
+          <a href="/assets" target="_blank" style="font-size:.78rem;color:#666;text-decoration:none">Browse Library ↗</a>
+        </div>
+      </div>
+      <p style="font-size:.82rem;color:#555;margin-bottom:16px;line-height:1.55">
+        Select a cloned visual style to apply its look to all generated images. The style's template will wrap every scene's image prompt.
+        <strong style="color:#aaa"> Skip to continue without one.</strong>
+      </p>
+
+      <!-- Styles grid -->
+      <div id="p0-styles-loading" style="display:flex;align-items:center;gap:8px;color:#555;font-size:.85rem;padding:16px 0">
+        <span class="spinner"></span> Loading saved styles…
+      </div>
+      <div id="p0-styles-empty" style="display:none;padding:24px;text-align:center;background:#111118;border:1px solid #2e2e42;border-radius:10px">
+        <p style="font-size:.875rem;color:#555;margin-bottom:12px">No styles yet — clone a video's look to create reusable templates.</p>
+        <a href="/style-cloner" target="_blank" style="font-size:.82rem;padding:7px 16px;background:#1e1e2e;border:1px solid #3a3a54;border-radius:7px;color:#22d3ee;text-decoration:none;display:inline-block">Open Style Cloner</a>
+      </div>
+      <div class="style-selector-grid" id="p0-styles-grid" style="display:none"></div>
+
+      <!-- Selected style indicator -->
+      <div id="p0-selected-bar" style="display:none;margin-top:14px;padding:10px 14px;background:linear-gradient(135deg,#4ade8014,#22d3ee0a);border:1px solid #4ade8030;border-radius:8px;display:none;align-items:center;gap:10px">
+        <span class="style-badge-dot"></span>
+        <span style="font-size:.85rem;font-weight:600;color:#4ade80" id="p0-selected-name"></span>
+        <span style="font-size:.78rem;color:#555;flex:1" id="p0-selected-desc"></span>
+        <button class="btn-sm" onclick="clearSelectedStyle()" style="padding:4px 10px;font-size:.75rem">Clear</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn-primary" id="p0-proceed-btn" style="flex:1">Continue with Selected Style →</button>
+      <button class="btn-secondary" id="p0-skip-btn" style="min-width:140px">Skip — No Style</button>
+    </div>
+
   </div>
 
   <!-- ══════════════════════════════════
@@ -661,6 +738,99 @@
 
   document.getElementById('wf-ai-type').addEventListener('change', syncWfSceneDuration);
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // PHASE 0 — Visual Style
+  // ══════════════════════════════════════════════════════════════════════════
+
+  let wfSelectedStyle   = null; // full style object when one is chosen
+  let p0AllStyles       = [];   // cache of loaded styles
+
+  async function loadP0Styles() {
+    const loadingEl = document.getElementById('p0-styles-loading');
+    const emptyEl   = document.getElementById('p0-styles-empty');
+    const gridEl    = document.getElementById('p0-styles-grid');
+
+    try {
+      const res  = await fetch('/api/styles', { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json();
+      p0AllStyles = data.styles || [];
+    } catch {
+      p0AllStyles = [];
+    }
+
+    loadingEl.style.display = 'none';
+
+    if (p0AllStyles.length === 0) {
+      emptyEl.style.display = '';
+      return;
+    }
+
+    gridEl.style.display = '';
+    gridEl.innerHTML = p0AllStyles.map((s, idx) => {
+      const thumbHtml = s.thumbnail
+        ? `<img src="data:image/jpeg;base64,${s.thumbnail}" alt="" loading="lazy"/>`
+        : `<div class="no-thumb"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+      const colors = (s.colorPalette || []).slice(0, 5).map(c =>
+        `<div class="style-dot" style="background:${escHtml(c.hex||'#888')}" title="${escHtml(c.role||'')}"></div>`
+      ).join('');
+      return `
+        <div class="style-selector-card" id="p0-card-${idx}" onclick="selectStyleCard(${idx})">
+          <div class="style-selector-thumb">${thumbHtml}</div>
+          <div class="style-selector-body">
+            <div class="style-selector-name">${escHtml(s.styleName||'Unnamed')}</div>
+            <div class="style-selector-desc">${escHtml((s.coreIdentity||'').slice(0,90))}${(s.coreIdentity||'').length>90?'…':''}</div>
+            ${colors ? `<div class="style-color-dots">${colors}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+    // Auto-select if a style was pre-selected from sessionStorage or Assets page
+    const preselectedId = sessionStorage.getItem('workflow_style_id');
+    if (preselectedId) {
+      const idx = p0AllStyles.findIndex(s => s.id === preselectedId);
+      if (idx >= 0) selectStyleCard(idx);
+    }
+  }
+
+  function selectStyleCard(idx) {
+    // Deselect all
+    document.querySelectorAll('.style-selector-card').forEach(c => c.classList.remove('selected'));
+    const card = document.getElementById(`p0-card-${idx}`);
+    if (card) card.classList.add('selected');
+
+    wfSelectedStyle = p0AllStyles[idx];
+
+    const bar     = document.getElementById('p0-selected-bar');
+    const nameEl  = document.getElementById('p0-selected-name');
+    const descEl  = document.getElementById('p0-selected-desc');
+    nameEl.textContent = wfSelectedStyle.styleName || 'Unnamed Style';
+    descEl.textContent = (wfSelectedStyle.coreIdentity || '').slice(0, 100) + ((wfSelectedStyle.coreIdentity||'').length > 100 ? '…' : '');
+    bar.style.display = 'flex';
+
+    document.getElementById('p0-proceed-btn').textContent = `Use "${wfSelectedStyle.styleName}" →`;
+  }
+
+  function clearSelectedStyle() {
+    wfSelectedStyle = null;
+    sessionStorage.removeItem('workflow_style_id');
+    document.querySelectorAll('.style-selector-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('p0-selected-bar').style.display = 'none';
+    document.getElementById('p0-proceed-btn').textContent = 'Continue with Selected Style →';
+  }
+
+  document.getElementById('p0-skip-btn').addEventListener('click', () => {
+    wfSelectedStyle = null;
+    sessionStorage.removeItem('workflow_style_id');
+    setStep(1);
+  });
+
+  document.getElementById('p0-proceed-btn').addEventListener('click', () => {
+    setStep(1);
+  });
+
+  // Start loading styles for Phase 0
+  loadP0Styles();
+
   // ── Asset mode selector (workflow) ────────────────────────────────────────
   let wfAssetMode = 'images';
 
@@ -723,12 +893,14 @@
 
   // ── Stepper ───────────────────────────────────────────────────────────────
   function setStep(n) {
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 0; i <= 4; i++) {
       const el = document.getElementById(`step${i}`);
+      if (!el) continue;
       el.classList.remove('active','done');
       if (i < n) el.classList.add('done');
       else if (i === n) el.classList.add('active');
     }
+    document.getElementById('phase0').style.display = n === 0 ? 'flex' : 'none';
     document.getElementById('phase1').style.display = n === 1 ? 'flex' : 'none';
     document.getElementById('phase2').style.display = n === 2 ? 'flex' : 'none';
     document.getElementById('phase3').style.display = n === 3 ? 'flex' : 'none';
@@ -905,6 +1077,9 @@
 
   document.getElementById('back-to-script-btn').addEventListener('click', () => setStep(1));
 
+  // Back to style from Phase 1 — add a nav link at top of Phase 1
+  // (handled by clicking the step0 stepper bubble or the header link)
+
   document.getElementById('approve-btn').addEventListener('click', () => {
     // Commit edits back into wfScenes
     wfScenes.forEach((s, i) => {
@@ -925,8 +1100,11 @@
   const studioAssets = {};
 
   function buildAssetStudio() {
-    document.getElementById('studio-scene-label').textContent =
-      `${wfScenes.length} scene${wfScenes.length !== 1 ? 's' : ''}`;
+    const sceneLabel = `${wfScenes.length} scene${wfScenes.length !== 1 ? 's' : ''}`;
+    const stylePart  = wfSelectedStyle
+      ? ` &nbsp;<span class="style-badge"><span class="style-badge-dot"></span>${escHtml(wfSelectedStyle.styleName||'Style')}</span>`
+      : '';
+    document.getElementById('studio-scene-label').innerHTML = sceneLabel + stylePart;
 
     const list = document.getElementById('studio-scenes-list');
     list.innerHTML = wfScenes.map((s, i) => `
@@ -1025,14 +1203,30 @@
     }
   }
 
+  // ── Build style-enhanced prompt ────────────────────────────────────────────
+  function buildStyledPrompt(rawPrompt) {
+    if (!wfSelectedStyle || !wfSelectedStyle.masterTemplate) return rawPrompt;
+    // Fill the master template with the scene-specific prompt
+    return wfSelectedStyle.masterTemplate
+      .replace(/\{SCENE_DESCRIPTION\}/g, rawPrompt)
+      .replace(/\{PRIMARY_SUBJECT\}/g, rawPrompt.split(' ').slice(0, 8).join(' '))
+      .replace(/\{PRIMARY_SUBJECT_ACTION\}/g, 'featured prominently')
+      .replace(/\{SECONDARY_SUBJECTS\}/g, 'supporting visual elements')
+      .replace(/\{ENVIRONMENT\}/g, 'appropriate setting')
+      .replace(/\{MOOD\}/g, 'cinematic and evocative')
+      .replace(/\{TEXT_OVERLAY\}/g, '');
+  }
+
   // ── Image generation ───────────────────────────────────────────────────────
   async function wfGenImg(i) {
-    const prompt = document.getElementById(`wf-imgta-${i}`).value.trim();
+    const rawPrompt = document.getElementById(`wf-imgta-${i}`).value.trim();
     const projectId = document.getElementById('wf-project-id').value.trim();
-    if (!prompt)    { setAssetStatus('img', i, 'Prompt is empty.', true); return; }
-    if (!projectId) { setAssetStatus('img', i, 'Enter Project ID first.', true); return; }
+    if (!rawPrompt)  { setAssetStatus('img', i, 'Prompt is empty.', true); return; }
+    if (!projectId)  { setAssetStatus('img', i, 'Enter Project ID first.', true); return; }
 
-    setAssetStatusHtml('img', i, '<span class="spinner"></span> Generating…');
+    const prompt = buildStyledPrompt(rawPrompt);
+    const usingStyle = wfSelectedStyle && wfSelectedStyle.masterTemplate;
+    setAssetStatusHtml('img', i, `<span class="spinner"></span> Generating${usingStyle ? ` (${escHtml(wfSelectedStyle.styleName||'Style')})` : ''}…`);
     document.getElementById(`wf-imgpreview-${i}`).innerHTML = '';
 
     try {

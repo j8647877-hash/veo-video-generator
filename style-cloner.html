@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Style Cloner — AI Studio</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f0f13;
+      color: #e8e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 28px; border-bottom: 1px solid #1e1e2a;
+      background: #0f0f13; position: sticky; top: 0; z-index: 10;
+    }
+    .back-btn { display:flex;align-items:center;gap:6px;color:#666;font-size:.875rem;text-decoration:none;transition:color .2s; }
+    .back-btn:hover { color:#e8e8f0; }
+    .user-chip { display:flex;align-items:center;gap:8px;background:#1a1a24;border:1px solid #2a2a3a;border-radius:20px;padding:5px 12px;font-size:.82rem;color:#aaa; }
+    .user-dot  { width:7px;height:7px;background:#4caf6e;border-radius:50%; }
+    .btn-sign-out { background:none;border:none;color:#555;font-size:.78rem;cursor:pointer;font-family:inherit;margin-left:4px;transition:color .2s; }
+    .btn-sign-out:hover { color:#e8e8f0; }
+
+    .page-body { flex:1; display:flex; flex-direction:column; align-items:center; padding:40px 20px; }
+    .container  { width:100%; max-width:860px; display:flex; flex-direction:column; gap:24px; }
+
+    header { text-align:center; }
+    header h1 {
+      font-size: 2rem; font-weight: 700;
+      background: linear-gradient(135deg, #4ade80, #22d3ee);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; letter-spacing: -0.02em;
+    }
+    header p { margin-top:8px; color:#888; font-size:.95rem; }
+
+    .card { background:#1a1a24; border:1px solid #2a2a3a; border-radius:14px; padding:24px; }
+    .card h2 { font-size:.8rem; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:#666; margin-bottom:16px; }
+
+    label { display:block; font-size:.85rem; color:#aaa; margin-bottom:6px; }
+    input[type="text"], input[type="url"] {
+      width:100%; background:#111118; border:1px solid #2e2e42; border-radius:8px;
+      color:#e8e8f0; font-size:.95rem; padding:10px 14px; outline:none;
+      transition:border-color .2s; font-family:inherit;
+    }
+    input[type="text"]:focus, input[type="url"]:focus { border-color:#22d3ee; }
+
+    /* ── Mode toggle ── */
+    .mode-toggle { display:flex; background:#111118; border:1px solid #2e2e42; border-radius:9px; padding:3px; gap:3px; margin-bottom:20px; }
+    .mode-btn {
+      flex:1; padding:9px 14px; background:none; border:1px solid transparent; border-radius:7px;
+      color:#666; font-size:.875rem; font-weight:500; cursor:pointer;
+      transition:background .15s,color .15s,border-color .15s; font-family:inherit; text-align:center;
+    }
+    .mode-btn.active { background:linear-gradient(135deg,#4ade8018,#22d3ee12); border-color:#22d3ee50; color:#e8e8f0; }
+
+    /* ── Drop zone ── */
+    .drop-zone {
+      border: 2px dashed #2e2e42; border-radius: 12px; padding: 40px 20px;
+      text-align: center; cursor: pointer; transition: border-color .2s, background .2s;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: #22d3ee; background: #22d3ee08; }
+    .drop-zone svg { opacity: .4; }
+    .drop-zone p { color:#666; font-size:.9rem; }
+    .drop-zone strong { color:#aaa; font-size:.9rem; }
+    .drop-zone input[type="file"] { display:none; }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      width:100%; padding:14px 28px;
+      background:linear-gradient(135deg,#4ade80,#22d3ee);
+      border:none; border-radius:10px; color:#0f0f13; font-size:1rem; font-weight:700;
+      cursor:pointer; transition:opacity .2s,transform .1s; letter-spacing:.01em;
+    }
+    .btn-primary:hover:not(:disabled) { opacity:.88; }
+    .btn-primary:active:not(:disabled) { transform:scale(.99); }
+    .btn-primary:disabled { opacity:.45; cursor:not-allowed; }
+
+    .btn-secondary {
+      padding:9px 20px; background:#1e1e2e; border:1px solid #3a3a54; border-radius:8px;
+      color:#c0c0d8; font-size:.875rem; font-weight:500; cursor:pointer;
+      transition:background .2s,border-color .2s; font-family:inherit;
+    }
+    .btn-secondary:hover:not(:disabled) { background:#25253a; border-color:#22d3ee; color:#e8e8f0; }
+    .btn-secondary:disabled { opacity:.4; cursor:not-allowed; }
+
+    /* ── Frames grid ── */
+    .frames-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .frame-thumb {
+      aspect-ratio: 16/9;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #2a2a3a;
+      position: relative;
+    }
+    .frame-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+    .frame-ts {
+      position:absolute; bottom:4px; right:4px;
+      font-size:.62rem; background:#000a; color:#fff; border-radius:3px; padding:1px 5px;
+    }
+
+    /* ── Progress ── */
+    .progress-bar-track { height:5px; background:#1a1a2a; border-radius:3px; overflow:hidden; margin-top:8px; }
+    .progress-bar-fill  { height:100%; background:linear-gradient(90deg,#4ade80,#22d3ee); border-radius:3px; transition:width .3s ease; }
+
+    .status-msg { font-size:.85rem; color:#22d3ee; margin-top:8px; min-height:1.3em; }
+    .status-msg.err { color:#f08090; }
+
+    /* ── Error ── */
+    .error-box { background:#1f0f14; border:1px solid #4a1a28; border-radius:10px; padding:14px 18px; color:#f08090; font-size:.88rem; line-height:1.5; display:none; }
+    .error-box.visible { display:block; }
+
+    /* ── Spinner ── */
+    .spinner {
+      display:inline-block; width:13px; height:13px;
+      border:2px solid #22d3ee; border-top-color:transparent;
+      border-radius:50%; animation:spin .8s linear infinite;
+      vertical-align:middle; margin-right:6px;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ── Results ── */
+    #results-section { display:none; flex-direction:column; gap:24px; }
+    #results-section.visible { display:flex; }
+
+    .style-name-display {
+      font-size:1.5rem; font-weight:700;
+      background:linear-gradient(135deg,#4ade80,#22d3ee);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    }
+
+    .color-swatches { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+    .swatch {
+      display:flex; align-items:center; gap:8px;
+      background:#111118; border:1px solid #2e2e42; border-radius:8px; padding:6px 12px;
+    }
+    .swatch-dot { width:18px; height:18px; border-radius:50%; border:1px solid #ffffff20; flex-shrink:0; }
+    .swatch-info { display:flex; flex-direction:column; gap:1px; }
+    .swatch-hex  { font-size:.75rem; color:#aaa; font-family:monospace; }
+    .swatch-role { font-size:.72rem; color:#555; }
+
+    .sig-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+    .sig-tag  { background:#111118; border:1px solid #2e2e42; border-radius:6px; padding:4px 10px; font-size:.8rem; color:#aaa; }
+
+    .template-box {
+      background:#111118; border:1px solid #2e2e42; border-radius:8px;
+      padding:14px 16px; font-size:.82rem; color:#c8c8e0;
+      line-height:1.65; white-space:pre-wrap; word-break:break-word;
+      max-height:200px; overflow-y:auto;
+    }
+
+    .scene-tabs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+    .scene-tab  {
+      padding:5px 14px; background:#111118; border:1px solid #2e2e42; border-radius:6px;
+      font-size:.78rem; color:#666; cursor:pointer; transition:all .15s; font-family:inherit;
+    }
+    .scene-tab.active { background:#22d3ee18; border-color:#22d3ee50; color:#e8e8f0; }
+
+    /* ── Saved state ── */
+    .saved-banner {
+      background:linear-gradient(135deg,#4ade8018,#22d3ee12);
+      border:1px solid #4ade8040; border-radius:12px; padding:24px;
+      text-align:center; display:none;
+    }
+    .saved-banner.visible { display:block; }
+    .saved-banner h3 { font-size:1.1rem; font-weight:700; color:#4ade80; margin-bottom:8px; }
+    .saved-banner p  { font-size:.875rem; color:#888; margin-bottom:16px; }
+    .saved-links     { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+    .saved-links a   { padding:9px 20px; background:#1e1e2e; border:1px solid #3a3a54; border-radius:8px; color:#c0c0d8; font-size:.875rem; text-decoration:none; transition:all .2s; }
+    .saved-links a:hover { background:#25253a; border-color:#22d3ee; color:#e8e8f0; }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="/dashboard" class="back-btn">← Dashboard</a>
+  <div class="user-chip">
+    <span class="user-dot"></span>
+    <span id="user-email">…</span>
+    <button class="btn-sign-out" id="sign-out-btn">Sign out</button>
+  </div>
+</nav>
+
+<div class="page-body">
+<div class="container">
+
+  <header>
+    <h1>Visual Style Cloner</h1>
+    <p>Upload a video or paste a YouTube URL. Gemini analyzes the visual style and creates reusable templates.</p>
+  </header>
+
+  <!-- ── Setup card ── -->
+  <div class="card">
+    <h2>Input</h2>
+
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="mode-youtube" onclick="setMode('youtube')">YouTube URL</button>
+      <button class="mode-btn" id="mode-upload" onclick="setMode('upload')">Upload Video</button>
+    </div>
+
+    <!-- YouTube mode -->
+    <div id="youtube-section">
+      <div style="margin-bottom:16px">
+        <label for="yt-url">YouTube video URL</label>
+        <input type="url" id="yt-url" placeholder="https://www.youtube.com/watch?v=…" />
+        <p style="font-size:.75rem;color:#555;margin-top:6px">Gemini analyzes the full video directly — no download needed.</p>
+      </div>
+    </div>
+
+    <!-- Upload mode -->
+    <div id="upload-section" style="display:none">
+      <div class="drop-zone" id="drop-zone">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 16 12 12 8 16"/>
+          <line x1="12" y1="12" x2="12" y2="21"/>
+          <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+        </svg>
+        <strong>Drag &amp; drop video here</strong>
+        <p>or click to browse — MP4, MOV, WebM, AVI</p>
+        <input type="file" id="video-file-input" accept="video/*" />
+      </div>
+      <div id="file-selected" style="display:none;margin-top:12px">
+        <div style="background:#111118;border:1px solid #2e2e42;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:10px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+          </svg>
+          <span id="file-name" style="font-size:.875rem;color:#e8e8f0;flex:1"></span>
+          <button class="btn-secondary" style="padding:5px 12px;font-size:.75rem" onclick="clearFile()">Clear</button>
+        </div>
+        <div id="frames-section" style="margin-top:16px;display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:.78rem;color:#666;text-transform:uppercase;letter-spacing:.07em;font-weight:600">Extracted Frames (<span id="frame-count">0</span>)</span>
+            <span class="status-msg" id="extract-status" style="margin:0"></span>
+          </div>
+          <div class="progress-bar-track" id="extract-progress-track" style="display:none">
+            <div class="progress-bar-fill" id="extract-progress-fill" style="width:0%"></div>
+          </div>
+          <div class="frames-grid" id="frames-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Project ID -->
+    <div style="margin-top:20px;margin-bottom:20px">
+      <label for="sc-project-id">Google Cloud Project ID</label>
+      <input type="text" id="sc-project-id" placeholder="my-gcp-project" />
+    </div>
+
+    <div class="error-box" id="input-error"></div>
+    <button class="btn-primary" id="analyze-btn" style="margin-top:8px">Analyze Visual Style</button>
+  </div>
+
+  <!-- ── Analysis progress ── -->
+  <div id="analysis-progress" class="card" style="display:none">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <span class="spinner"></span>
+      <span style="font-size:.95rem;color:#e8e8f0" id="analysis-label">Analyzing visual style…</span>
+    </div>
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="analysis-progress-fill" style="width:0%;transition:width .8s ease"></div>
+    </div>
+    <p style="font-size:.78rem;color:#555;margin-top:8px">
+      Gemini is examining rendering technique, color palette, lighting, composition, and signature elements.
+    </p>
+  </div>
+
+  <!-- ── Results ── -->
+  <div id="results-section">
+
+    <div class="card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <p style="font-size:.72rem;color:#555;text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:4px">Detected Style</p>
+          <div class="style-name-display" id="res-style-name"></div>
+        </div>
+        <span id="res-aspect" style="font-size:.8rem;background:#111118;border:1px solid #2e2e42;border-radius:5px;padding:3px 10px;color:#aaa;white-space:nowrap"></span>
+      </div>
+      <p id="res-core-identity" style="margin-top:14px;font-size:.9rem;color:#aaa;line-height:1.65"></p>
+    </div>
+
+    <div class="card">
+      <h2>Color Palette</h2>
+      <div class="color-swatches" id="res-colors"></div>
+    </div>
+
+    <div class="card">
+      <h2>Signature Elements</h2>
+      <div class="sig-list" id="res-sig-elements"></div>
+      <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px" id="res-details-grid"></div>
+    </div>
+
+    <div class="card">
+      <h2>Master Prompt Template</h2>
+      <p style="font-size:.78rem;color:#555;margin-bottom:10px;line-height:1.5">
+        Fill in <code style="background:#111118;border:1px solid #2e2e42;border-radius:3px;padding:1px 6px;color:#22d3ee">{PLACEHOLDERS}</code>
+        with scene-specific content. The style is fully encoded in the surrounding text.
+      </p>
+      <div class="template-box" id="res-master-template"></div>
+    </div>
+
+    <div class="card">
+      <h2>Scene Type Templates</h2>
+      <div class="scene-tabs" id="scene-tabs"></div>
+      <div class="template-box" id="res-scene-template"></div>
+    </div>
+
+    <!-- Save to Library -->
+    <div class="card" id="save-card">
+      <h2>Save to Library</h2>
+      <p style="font-size:.875rem;color:#888;margin-bottom:16px;line-height:1.55">
+        Save this style as a persistent template. It will be available in the Style Library and
+        the Production Workflow's optional Style step for all future videos.
+      </p>
+      <div class="error-box" id="save-error"></div>
+      <button class="btn-primary" id="save-btn" style="margin-top:8px">Save Style to Library</button>
+    </div>
+
+    <!-- Saved banner -->
+    <div class="saved-banner" id="saved-banner">
+      <h3>Style Saved!</h3>
+      <p>Your style template is now in the library and ready to use in the Production Workflow.</p>
+      <div class="saved-links">
+        <a href="/assets">View Style Library</a>
+        <a href="/workflow">Open Workflow</a>
+        <a href="/style-cloner" onclick="location.reload();return false">Clone Another Style</a>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</div>
+
+<script>
+  // Auth guard
+  const token = sessionStorage.getItem('access_token');
+  if (!token) window.location.href = '/';
+
+  function getEmail() {
+    const t = sessionStorage.getItem('id_token');
+    if (!t) return null;
+    try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email || null; }
+    catch { return null; }
+  }
+  document.getElementById('user-email').textContent = getEmail() || 'Signed in';
+  document.getElementById('sign-out-btn').addEventListener('click', () => { sessionStorage.clear(); window.location.href = '/'; });
+
+  // Pre-fill project ID
+  (async () => {
+    try {
+      const cfg = await (await fetch('/api/config')).json();
+      if (cfg.projectId) document.getElementById('sc-project-id').value = cfg.projectId;
+    } catch {}
+    const saved = sessionStorage.getItem('project_id');
+    if (saved && !document.getElementById('sc-project-id').value)
+      document.getElementById('sc-project-id').value = saved;
+  })();
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let currentMode = 'youtube';
+  let extractedFrames = []; // { base64, timestamp }
+  let selectedFile = null;
+  let analysisResult = null;
+  let activeSceneTab = 'portrait';
+
+  // ── Mode toggle ───────────────────────────────────────────────────────────
+  function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('youtube-section').style.display = mode === 'youtube' ? '' : 'none';
+    document.getElementById('upload-section').style.display  = mode === 'upload'  ? '' : 'none';
+    document.getElementById('mode-youtube').classList.toggle('active', mode === 'youtube');
+    document.getElementById('mode-upload').classList.toggle('active',  mode === 'upload');
+  }
+
+  // ── File upload ───────────────────────────────────────────────────────────
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('video-file-input');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('video/')) setFile(file);
+    else showInputError('Please drop a valid video file.');
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) setFile(fileInput.files[0]);
+  });
+
+  function setFile(file) {
+    selectedFile = file;
+    extractedFrames = [];
+    document.getElementById('file-name').textContent = file.name;
+    document.getElementById('file-selected').style.display = '';
+    dropZone.style.display = 'none';
+    document.getElementById('frames-section').style.display = '';
+    extractFrames(file);
+  }
+
+  function clearFile() {
+    selectedFile = null;
+    extractedFrames = [];
+    fileInput.value = '';
+    document.getElementById('file-selected').style.display = 'none';
+    document.getElementById('frames-section').style.display = 'none';
+    document.getElementById('frames-grid').innerHTML = '';
+    document.getElementById('frame-count').textContent = '0';
+    dropZone.style.display = '';
+  }
+
+  // ── Frame extraction (client-side) ────────────────────────────────────────
+  async function extractFrames(file) {
+    const statusEl   = document.getElementById('extract-status');
+    const progressEl = document.getElementById('extract-progress-fill');
+    const trackEl    = document.getElementById('extract-progress-track');
+    const gridEl     = document.getElementById('frames-grid');
+    const countEl    = document.getElementById('frame-count');
+
+    gridEl.innerHTML = '';
+    extractedFrames  = [];
+    trackEl.style.display = '';
+    statusEl.textContent  = 'Loading video…';
+    statusEl.className    = 'status-msg';
+
+    const numFrames = 14;
+
+    return new Promise((resolve) => {
+      const video  = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted   = true;
+      video.crossOrigin = 'anonymous';
+
+      const objUrl = URL.createObjectURL(file);
+      video.src    = objUrl;
+
+      video.addEventListener('error', () => {
+        URL.revokeObjectURL(objUrl);
+        statusEl.textContent = 'Could not read video. Try a different format.';
+        statusEl.className   = 'status-msg err';
+        trackEl.style.display = 'none';
+        resolve([]);
+      });
+
+      video.addEventListener('loadedmetadata', async () => {
+        const duration = video.duration;
+        if (!duration || !isFinite(duration)) {
+          statusEl.textContent = 'Could not read video duration.';
+          statusEl.className   = 'status-msg err';
+          resolve([]);
+          return;
+        }
+
+        const canvas = document.createElement('canvas');
+        const maxW   = 768;
+        const scale  = Math.min(1, maxW / (video.videoWidth || maxW));
+        canvas.width  = Math.round((video.videoWidth  || 1280) * scale);
+        canvas.height = Math.round((video.videoHeight || 720)  * scale);
+        const ctx     = canvas.getContext('2d');
+
+        const start  = duration * 0.04;
+        const end    = duration * 0.96;
+        const range  = end - start;
+
+        for (let i = 0; i < numFrames; i++) {
+          const seekTime = start + (range / (numFrames - 1)) * i;
+          video.currentTime = seekTime;
+
+          await new Promise(r => {
+            const onSeeked = () => { video.removeEventListener('seeked', onSeeked); r(); };
+            video.addEventListener('seeked', onSeeked);
+          });
+
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const b64 = canvas.toDataURL('image/jpeg', 0.78).split(',')[1];
+          const frame = { base64: b64, timestamp: seekTime };
+          extractedFrames.push(frame);
+
+          // Show thumbnail
+          const thumb = document.createElement('div');
+          thumb.className = 'frame-thumb';
+          thumb.innerHTML = `<img src="data:image/jpeg;base64,${b64}" /><span class="frame-ts">${formatTime(seekTime)}</span>`;
+          gridEl.appendChild(thumb);
+
+          countEl.textContent = extractedFrames.length;
+          const pct = ((i + 1) / numFrames) * 100;
+          progressEl.style.width = `${pct}%`;
+          statusEl.textContent = `Extracting frame ${i + 1} of ${numFrames}…`;
+        }
+
+        URL.revokeObjectURL(objUrl);
+        statusEl.textContent = `${numFrames} frames extracted`;
+        progressEl.style.width = '100%';
+        resolve(extractedFrames);
+      });
+    });
+  }
+
+  function formatTime(secs) {
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  // ── Error helpers ─────────────────────────────────────────────────────────
+  function showInputError(msg) {
+    const el = document.getElementById('input-error');
+    el.textContent = msg; el.classList.add('visible');
+  }
+  function clearInputError() {
+    const el = document.getElementById('input-error');
+    el.textContent = ''; el.classList.remove('visible');
+  }
+
+  // ── Analyze button ────────────────────────────────────────────────────────
+  document.getElementById('analyze-btn').addEventListener('click', runAnalysis);
+
+  async function runAnalysis() {
+    clearInputError();
+
+    const projectId = document.getElementById('sc-project-id').value.trim();
+    if (!projectId) { showInputError('Please enter your GCP Project ID.'); return; }
+
+    let payload = { projectId };
+
+    if (currentMode === 'youtube') {
+      const url = document.getElementById('yt-url').value.trim();
+      if (!url) { showInputError('Please enter a YouTube URL.'); return; }
+      if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
+        showInputError('Please enter a valid YouTube URL.'); return;
+      }
+      payload.youtubeUrl = url;
+    } else {
+      if (!selectedFile) { showInputError('Please select a video file.'); return; }
+      if (extractedFrames.length === 0) { showInputError('Frames are still extracting — please wait.'); return; }
+      payload.frames = extractedFrames.map(f => f.base64);
+    }
+
+    const btn = document.getElementById('analyze-btn');
+    btn.disabled = true;
+    btn.textContent = 'Analyzing…';
+
+    const progressCard = document.getElementById('analysis-progress');
+    const progressFill = document.getElementById('analysis-progress-fill');
+    const progressLabel = document.getElementById('analysis-label');
+    progressCard.style.display = '';
+    progressFill.style.width = '0%';
+
+    // Fake progress animation while waiting
+    let fakeProgress = 0;
+    const fakeInterval = setInterval(() => {
+      if (fakeProgress < 85) {
+        fakeProgress += Math.random() * 4;
+        progressFill.style.width = `${Math.min(fakeProgress, 85)}%`;
+        const labels = [
+          'Examining rendering technique…',
+          'Analyzing color palette…',
+          'Detecting lighting style…',
+          'Identifying composition patterns…',
+          'Extracting signature elements…',
+          'Building style templates…',
+        ];
+        progressLabel.textContent = labels[Math.floor(fakeProgress / 15)] || 'Analyzing…';
+      }
+    }, 1200);
+
+    try {
+      const res = await fetch('/api/analyze-style', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      clearInterval(fakeInterval);
+      if (!res.ok) throw new Error(data.error || `Status ${res.status}`);
+
+      analysisResult = data;
+      progressFill.style.width = '100%';
+      progressLabel.textContent = 'Complete!';
+      setTimeout(() => { progressCard.style.display = 'none'; }, 600);
+
+      renderResults(data);
+      sessionStorage.setItem('project_id', projectId);
+
+    } catch (err) {
+      clearInterval(fakeInterval);
+      progressCard.style.display = 'none';
+      showInputError('Analysis failed: ' + err.message);
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Analyze Visual Style';
+  }
+
+  // ── Render results ────────────────────────────────────────────────────────
+  function renderResults(data) {
+    document.getElementById('res-style-name').textContent = data.styleName || 'Unnamed Style';
+    document.getElementById('res-aspect').textContent = data.aspectRatio || '16:9';
+    document.getElementById('res-core-identity').textContent = data.coreIdentity || '';
+
+    // Color palette
+    const colorsEl = document.getElementById('res-colors');
+    colorsEl.innerHTML = (data.colorPalette || []).map(c => `
+      <div class="swatch">
+        <div class="swatch-dot" style="background:${escHtml(c.hex || '#888')}"></div>
+        <div class="swatch-info">
+          <span class="swatch-hex">${escHtml(c.hex || '')}</span>
+          <span class="swatch-role">${escHtml(c.role || c.name || '')}</span>
+        </div>
+      </div>
+    `).join('');
+
+    // Signature elements
+    const sigEl = document.getElementById('res-sig-elements');
+    sigEl.innerHTML = (data.signatureElements || []).map(e => `<span class="sig-tag">${escHtml(e)}</span>`).join('');
+
+    // Detail grid
+    const gridEl = document.getElementById('res-details-grid');
+    const details = [
+      ['Rendering', data.renderingTechnique],
+      ['Lighting', data.lightingStyle],
+      ['Backgrounds', data.backgroundTreatment],
+      ['Surfaces', data.surfaceTreatment],
+      ['Figures', data.figureStyle],
+      ['Composition', data.compositionPatterns],
+      ['Effects', data.specialEffects],
+    ].filter(([,v]) => v);
+    gridEl.innerHTML = details.map(([label, value]) => `
+      <div style="background:#111118;border:1px solid #2e2e42;border-radius:8px;padding:12px 14px">
+        <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:#555;font-weight:600;margin-bottom:4px">${escHtml(label)}</div>
+        <div style="font-size:.82rem;color:#aaa;line-height:1.55">${escHtml(value)}</div>
+      </div>
+    `).join('');
+
+    // Master template
+    document.getElementById('res-master-template').textContent = data.masterTemplate || '';
+
+    // Scene type tabs
+    const templates = data.sceneTemplates || {};
+    const tabNames = { portrait:'Portrait', group:'Group', environment:'Environment', action:'Action', object:'Object', titleCard:'Title Card' };
+    const tabsEl   = document.getElementById('scene-tabs');
+    tabsEl.innerHTML = Object.keys(tabNames).filter(k => templates[k]).map(k => `
+      <button class="scene-tab${k === activeSceneTab ? ' active' : ''}" onclick="selectSceneTab('${k}')">${tabNames[k]}</button>
+    `).join('');
+    selectSceneTab(activeSceneTab);
+
+    document.getElementById('results-section').classList.add('visible');
+    document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('saved-banner').classList.remove('visible');
+    document.getElementById('save-card').style.display = '';
+  }
+
+  function selectSceneTab(key) {
+    activeSceneTab = key;
+    document.querySelectorAll('.scene-tab').forEach(b => b.classList.toggle('active', b.onclick?.toString().includes(key)));
+    const templates = analysisResult?.sceneTemplates || {};
+    document.getElementById('res-scene-template').textContent = templates[key] || '(Not available for this style)';
+  }
+
+  // ── Save to library ───────────────────────────────────────────────────────
+  document.getElementById('save-btn').addEventListener('click', saveStyle);
+
+  async function saveStyle() {
+    if (!analysisResult) return;
+
+    const projectId = document.getElementById('sc-project-id').value.trim();
+    const errEl = document.getElementById('save-error');
+    errEl.textContent = ''; errEl.classList.remove('visible');
+
+    const btn = document.getElementById('save-btn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+
+    const thumbnail = currentMode === 'upload' && extractedFrames.length > 0
+      ? extractedFrames[0].base64
+      : null;
+
+    const payload = {
+      ...analysisResult,
+      sourceType: currentMode,
+      sourceUrl:  currentMode === 'youtube' ? document.getElementById('yt-url').value.trim() : null,
+      sourceName: currentMode === 'upload'  ? (selectedFile?.name || null)                  : null,
+      thumbnail,
+    };
+
+    try {
+      const res = await fetch('/api/styles', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Status ${res.status}`);
+
+      document.getElementById('save-card').style.display = 'none';
+      document.getElementById('saved-banner').classList.add('visible');
+      document.getElementById('saved-banner').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      // Store the style ID so Workflow can pre-select it
+      sessionStorage.setItem('workflow_style_id', data.id);
+
+    } catch (err) {
+      errEl.textContent = 'Save failed: ' + err.message;
+      errEl.classList.add('visible');
+    }
+
+    btn.disabled = false; btn.textContent = 'Save Style to Library';
+  }
+
+  function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>

@@ -9,7 +9,7 @@ AI Studio — a full-stack web app for AI video, image, script, and voiceover ge
 ## Development Commands
 
 ```bash
-# Install dependencies
+# Install dependencies (Node.js >= 18 required)
 npm install
 
 # Deploy to Vercel (no local dev server — frontend is static HTML)
@@ -19,7 +19,7 @@ vercel deploy
 vercel dev
 ```
 
-There is no build step. Frontend is plain HTML/CSS/JS files served statically.
+There is no build step. Frontend is plain HTML/CSS/JS files served statically. The only npm dependency is `@google/genai`; all other libraries (ffmpeg.wasm, Remotion) are loaded via CDN ESM imports in the HTML files.
 
 ## Required Environment Variables
 
@@ -44,7 +44,9 @@ Static pages with inline JavaScript — no framework, no bundler:
 - `tts.html` — Gemini TTS voiceover
 - `script.html` — Gemini script writing (streaming SSE)
 - `agent.html` — structured production planning (JSON schema output)
-- `workflow.html` — end-to-end pipeline (script → scenes → visuals → audio)
+- `workflow.html` — end-to-end pipeline (optional style → script → scenes → visuals → audio)
+- `style-cloner.html` — clone a video's visual style (YouTube URL or file upload → Gemini analysis → style template kit)
+- `assets.html` — style library: browse, select, and delete saved visual style templates
 
 ### Backend (`api/` — Vercel serverless functions)
 Each file in `api/` maps to a route. All functions proxy requests to Google APIs and add CORS headers. Key functions:
@@ -55,6 +57,8 @@ Each file in `api/` maps to a route. All functions proxy requests to Google APIs
 - `api/script.js` — Gemini 2.5 streaming script generation (SSE)
 - `api/agent.js` — Gemini 2.5 Pro structured production plan (JSON schema)
 - `api/analyze-script.js` — break a script into scenes with prompts and durations
+- `api/analyze-style.js` — Gemini video understanding to extract visual style as a template kit; accepts YouTube URL (via `fileData.fileUri`) or base64 frames array
+- `api/styles.js` — CRUD for visual style templates stored in GCS under `styles/` prefix (GET=list, POST=save, DELETE=delete)
 - `api/tts.js` — Gemini TTS → PCM → WAV wrapping
 - `api/config.js` — expose public config (bucket, projectId) to frontend
 - `api/setup-cors.js` — configure CORS on the GCS bucket
@@ -72,9 +76,27 @@ Each file in `api/` maps to a route. All functions proxy requests to Google APIs
 | Scripting | `gemini-2.5-flash` / `gemini-2.5-pro` |
 | Production planning | `gemini-2.5-pro` |
 | TTS | `gemini-2.5-flash-preview-tts` |
+| Style analysis | `gemini-2.0-flash-001` (video understanding; YouTube URLs and image frames) |
 
 ### Routing
 `vercel.json` rewrites clean paths (`/dashboard`, `/video`, etc.) to the corresponding `.html` files.
+
+### Workflow Pipeline (`workflow.html`)
+The workflow page is a 5-phase sequential pipeline. Phase 0 is optional:
+0. **Style (optional)** — select a saved visual style template from GCS (`api/styles.js`); stored in `wfSelectedStyle`; can be skipped
+1. **Script** — generates narration via `api/script.js` (SSE stream)
+2. **Scenes** — calls `api/analyze-script.js` to split script into a structured JSON array of scenes (`sceneNumber`, `sceneTitle`, `voiceoverText`, `imagePrompt`, `videoPrompt`, `duration`)
+3. **Assets** — generates voiceover (TTS), images, or video per scene; results stored in `studioAssets[sceneIndex].{vo, img, vid}`; when `wfSelectedStyle` is set, `buildStyledPrompt()` wraps each image prompt with the style's `masterTemplate`
+4. **Render** — in-browser video assembly using `@ffmpeg/ffmpeg` (ESM CDN import, single-threaded core, no COOP/COEP headers required); alternatively downloads a Remotion project ZIP
+
+Asset mode (images / video / both) is selectable and controls which prompts `api/analyze-script.js` is instructed to emphasize.
+
+### Visual Style Cloner (`style-cloner.html`)
+- **YouTube URL mode**: passes URL directly to Vertex AI Gemini via `fileData.fileUri` — no download needed
+- **Upload mode**: extracts 14 evenly-spaced JPEG frames client-side using HTML5 Canvas; sends as `inlineData` parts
+- Analysis returned as a JSON style kit: `styleName`, `colorPalette`, `signatureElements`, `masterTemplate`, `sceneTemplates` (portrait/group/environment/action/object/titleCard)
+- Saved styles stored in GCS at `styles/{id}.json`; thumbnail is the first extracted frame (base64)
+- After saving, stores style ID in `sessionStorage.workflow_style_id` so Workflow auto-selects it
 
 ### Streaming
 `api/script.js` uses Server-Sent Events (SSE) to stream tokens to the browser. The frontend listens with `EventSource`-style `fetch` + `ReadableStream`.

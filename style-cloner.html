@@ -579,7 +579,7 @@
     }, 1200);
 
     try {
-      const res = await fetch('/api/analyze-style', {
+      const res = await fetch('/api/styles?action=analyze', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

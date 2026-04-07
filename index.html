@@ -135,24 +135,46 @@
 </div>
 
 <script>
+  // ── Auth helpers (shared logic — duplicated in each page for zero-build simplicity) ──
+  const AUTH = {
+    get(k)      { return localStorage.getItem(k); },
+    set(k, v)   { localStorage.setItem(k, v); },
+    remove(k)   { localStorage.removeItem(k); },
+    clear()     {
+      ['access_token','id_token','refresh_token','token_expiry','project_id','cors_setup'].forEach(k => localStorage.removeItem(k));
+    },
+    // Migrate from sessionStorage → localStorage (one-time)
+    migrate() {
+      ['access_token','id_token','project_id','cors_setup'].forEach(k => {
+        const v = sessionStorage.getItem(k);
+        if (v) { localStorage.setItem(k, v); sessionStorage.removeItem(k); }
+      });
+    },
+  };
+  AUTH.migrate();
+
   // Consume OAuth fragment returned by /api/callback
   (function () {
     if (!window.location.hash) return;
     const params = new URLSearchParams(window.location.hash.slice(1));
     const token   = params.get('access_token');
     const idToken = params.get('id_token');
+    const refresh = params.get('refresh_token');
+    const expires = params.get('expires_in');
     const project = params.get('project');
     if (token) {
-      sessionStorage.setItem('access_token', token);
-      if (idToken)  sessionStorage.setItem('id_token',   idToken);
-      if (project)  sessionStorage.setItem('project_id', project);
+      AUTH.set('access_token', token);
+      if (idToken)  AUTH.set('id_token',   idToken);
+      if (refresh)  AUTH.set('refresh_token', refresh);
+      if (expires)  AUTH.set('token_expiry', String(Date.now() + Number(expires) * 1000));
+      if (project)  AUTH.set('project_id', project);
       history.replaceState(null, '', '/');
       window.location.href = '/dashboard';
     }
   })();
 
   // If already signed in, skip straight to dashboard
-  if (sessionStorage.getItem('access_token')) {
+  if (AUTH.get('access_token')) {
     window.location.href = '/dashboard';
   }
 

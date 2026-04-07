@@ -14,8 +14,8 @@ module.exports = function handler(req, res) {
     redirect_uri:  redirectUri,
     response_type: 'code',
     scope:         'openid email https://www.googleapis.com/auth/cloud-platform',
-    access_type:   'online',
-    prompt:        'select_account',
+    access_type:   'offline',
+    prompt:        'consent',
   });
 
   res.redirect(302, `https://accounts.google.com/o/oauth2/v2/auth?${params}`);

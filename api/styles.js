@@ -11,6 +11,8 @@ const ANALYSIS_PROMPT = `You are an expert visual style analyst specializing in 
 
 Analyze the visual rendering style of this video carefully. Focus ONLY on HOW things look (artistic technique, color, lighting, rendering), NOT on WHAT the video is about. Strip out all topic, story, character names, and content.
 
+IMPORTANT: You must also analyze 12 individual keyframes spread throughout the video. For each keyframe, describe exactly what makes that frame visually distinctive — its composition, color use, lighting, framing, and mood. These keyframe analyses serve as visual references for recreating this style on new content.
+
 Analyze these visual dimensions:
 1. Rendering technique — 3D rendered, photorealistic, 2D illustrated, cel-shaded, mixed media, digital painting, etc.
 2. Color palette — dominant colors with approximate hex values, warm/cool temperature, saturation level, contrast level
@@ -23,6 +25,7 @@ Analyze these visual dimensions:
 9. Special effects — glow, particles, depth of field, film grain, bloom, chromatic aberration, vignette
 10. Typography style — if text appears: font weight, color, effects (glow/shadow), placement
 11. Signature elements — the 3-5 most distinctive visual quirks that make this style instantly recognizable
+12. Keyframe-by-keyframe analysis — select 12 visually distinct moments spread across the video and analyze each individually
 
 Return ONLY a valid JSON object with this exact structure (no markdown, no code blocks, just raw JSON):
 
@@ -42,6 +45,17 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no code 
   "typographyStyle": "Text rendering approach, or null if no text appears",
   "signatureElements": ["most distinctive element 1", "most distinctive element 2", "most distinctive element 3"],
   "aspectRatio": "16:9 or 9:16 or 4:3 or 1:1",
+  "keyframes": [
+    {
+      "index": 1,
+      "timestamp": "approximate timecode like 0:05 or 1:23",
+      "description": "Detailed visual description of exactly what this frame looks like — composition, subject placement, background, lighting angle, color temperature, mood. Be specific enough that an artist could recreate this frame.",
+      "dominantColors": ["#hex1", "#hex2", "#hex3"],
+      "compositionType": "one of: wide-shot, medium-shot, close-up, extreme-close-up, overhead, low-angle, profile, over-shoulder, symmetrical, rule-of-thirds",
+      "lightingMood": "specific lighting description for this frame",
+      "recreationPrompt": "A complete, self-contained image generation prompt that would recreate a frame with this EXACT visual style but with GENERIC subject placeholders. Include all style details (rendering, colors, lighting, effects) hardcoded, with {SUBJECT} and {SCENE} as the only placeholders."
+    }
+  ],
   "masterTemplate": "A comprehensive, detailed image generation prompt with {PRIMARY_SUBJECT}, {PRIMARY_SUBJECT_ACTION}, {SECONDARY_SUBJECTS}, {ENVIRONMENT}, {MOOD}, and {SCENE_DESCRIPTION} placeholders. This template must be long enough and specific enough that filling in any topic produces an image visually indistinguishable from this style. Include explicit rendering technique, color specifications, lighting approach, background treatment, and special effects — all hardcoded. Only scene-specific content uses placeholders.",
   "sceneTemplates": {
     "portrait": "Single subject hero shot template — {PRIMARY_SUBJECT} and {MOOD} placeholders only",
@@ -51,7 +65,9 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no code 
     "object": "Object/vehicle focus template — {PRIMARY_SUBJECT}, {ENVIRONMENT} placeholders",
     "titleCard": "Text/title card frame template — {PRIMARY_SUBJECT}, {TEXT_OVERLAY} placeholders"
   }
-}`;
+}
+
+The "keyframes" array MUST contain exactly 12 entries, spread evenly across the video duration. Each entry's "recreationPrompt" should be a standalone prompt that perfectly captures the visual style of that specific frame.`;
 
 async function analyzeStyle(req, res) {
   const authHeader = req.headers['authorization'];
@@ -62,7 +78,7 @@ async function analyzeStyle(req, res) {
     frames,
     projectId,
     location = 'us-central1',
-    model    = 'gemini-2.0-flash-001',
+    model    = 'gemini-2.5-flash',
   } = req.body;
 
   if (!projectId) return res.status(400).json({ error: 'projectId is required.' });
@@ -92,7 +108,7 @@ async function analyzeStyle(req, res) {
       headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
+        generationConfig: { temperature: 0.3, maxOutputTokens: 16384 },
       }),
     });
   } catch (err) {

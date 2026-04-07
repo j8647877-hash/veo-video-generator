@@ -168,6 +168,25 @@
     }
     .scene-tab.active { background:#22d3ee18; border-color:#22d3ee50; color:#e8e8f0; }
 
+    /* ── Reference frame cards ── */
+    .ref-frame-card {
+      background:#111118; border:1px solid #2e2e42; border-radius:10px; overflow:hidden;
+      transition:border-color .2s;
+    }
+    .ref-frame-card:hover { border-color:#22d3ee50; }
+    .ref-frame-card img { width:100%; aspect-ratio:16/9; object-fit:cover; display:block; }
+    .ref-frame-card .ref-meta {
+      padding:10px 12px; display:flex; flex-direction:column; gap:6px;
+    }
+    .ref-frame-card .ref-header {
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .ref-frame-card .ref-ts { font-size:.7rem; color:#22d3ee; font-family:monospace; }
+    .ref-frame-card .ref-comp { font-size:.68rem; color:#555; background:#1a1a24; border-radius:4px; padding:2px 6px; }
+    .ref-frame-card .ref-desc { font-size:.75rem; color:#888; line-height:1.45; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+    .ref-frame-card .ref-colors { display:flex; gap:3px; margin-top:2px; }
+    .ref-frame-card .ref-color-dot { width:12px; height:12px; border-radius:50%; border:1px solid #ffffff15; }
+
     /* ── Saved state ── */
     .saved-banner {
       background:linear-gradient(135deg,#4ade8018,#22d3ee12);
@@ -316,6 +335,15 @@
       <div class="template-box" id="res-scene-template"></div>
     </div>
 
+    <!-- Reference Frames -->
+    <div class="card" id="ref-frames-card" style="display:none">
+      <h2>Reference Keyframes (<span id="ref-frame-count">0</span>)</h2>
+      <p style="font-size:.78rem;color:#555;margin-bottom:14px;line-height:1.5">
+        These keyframe images and analyses are stored with the style template as visual references for accurate style recreation.
+      </p>
+      <div id="ref-frames-gallery" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px"></div>
+    </div>
+
     <!-- Save to Library -->
     <div class="card" id="save-card">
       <h2>Save to Library</h2>
@@ -344,18 +372,37 @@
 </div>
 
 <script>
-  // Auth guard
-  const token = sessionStorage.getItem('access_token');
+  // ── Auth helpers ──
+  const AUTH = {
+    get(k)    { return localStorage.getItem(k); },
+    set(k, v) { localStorage.setItem(k, v); },
+    clear()   { ['access_token','id_token','refresh_token','token_expiry','project_id','cors_setup'].forEach(k => localStorage.removeItem(k)); },
+    migrate() { ['access_token','id_token','project_id','cors_setup'].forEach(k => { const v = sessionStorage.getItem(k); if (v) { localStorage.setItem(k, v); sessionStorage.removeItem(k); } }); },
+    async refresh() {
+      const rt = AUTH.get('refresh_token'); if (!rt) return false;
+      try {
+        const res = await fetch('/api/callback?action=refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: rt }) });
+        if (!res.ok) return false;
+        const data = await res.json();
+        AUTH.set('access_token', data.access_token); if (data.id_token) AUTH.set('id_token', data.id_token);
+        AUTH.set('token_expiry', String(Date.now() + (data.expires_in || 3600) * 1000)); token = data.access_token; return true;
+      } catch { return false; }
+    },
+    isExpiringSoon() { const e = Number(AUTH.get('token_expiry') || 0); return e > 0 && Date.now() > e - 5 * 60 * 1000; },
+  };
+  AUTH.migrate();
+
+  let token = AUTH.get('access_token');
   if (!token) window.location.href = '/';
 
   function getEmail() {
-    const t = sessionStorage.getItem('id_token');
-    if (!t) return null;
-    try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email || null; }
-    catch { return null; }
+    const t = AUTH.get('id_token'); if (!t) return null;
+    try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email || null; } catch { return null; }
   }
   document.getElementById('user-email').textContent = getEmail() || 'Signed in';
-  document.getElementById('sign-out-btn').addEventListener('click', () => { sessionStorage.clear(); window.location.href = '/'; });
+  document.getElementById('sign-out-btn').addEventListener('click', () => { AUTH.clear(); window.location.href = '/'; });
+
+  (async function() { if (AUTH.isExpiringSoon()) await AUTH.refresh(); setInterval(async () => { if (AUTH.isExpiringSoon()) await AUTH.refresh(); }, 60000); })();
 
   // Pre-fill project ID
   (async () => {
@@ -363,7 +410,7 @@
       const cfg = await (await fetch('/api/config')).json();
       if (cfg.projectId) document.getElementById('sc-project-id').value = cfg.projectId;
     } catch {}
-    const saved = sessionStorage.getItem('project_id');
+    const saved = AUTH.get('project_id');
     if (saved && !document.getElementById('sc-project-id').value)
       document.getElementById('sc-project-id').value = saved;
   })();
@@ -594,7 +641,7 @@
       setTimeout(() => { progressCard.style.display = 'none'; }, 600);
 
       renderResults(data);
-      sessionStorage.setItem('project_id', projectId);
+      AUTH.set('project_id', projectId);
 
     } catch (err) {
       clearInterval(fakeInterval);
@@ -658,6 +705,36 @@
     `).join('');
     selectSceneTab(activeSceneTab);
 
+    // Keyframe reference gallery
+    const keyframes = data.keyframes || [];
+    const refCard = document.getElementById('ref-frames-card');
+    const refGallery = document.getElementById('ref-frames-gallery');
+    document.getElementById('ref-frame-count').textContent = keyframes.length;
+
+    if (keyframes.length > 0) {
+      refCard.style.display = '';
+      refGallery.innerHTML = keyframes.map((kf, i) => {
+        // Match keyframe to extracted frame by index if we have frames
+        const frameImg = extractedFrames[i]
+          ? `<img src="data:image/jpeg;base64,${extractedFrames[i].base64}" />`
+          : `<div style="width:100%;aspect-ratio:16/9;background:#1a1a24;display:flex;align-items:center;justify-content:center;color:#444;font-size:.75rem">${escHtml(kf.timestamp || `Frame ${kf.index}`)}</div>`;
+        const colorDots = (kf.dominantColors || []).map(c => `<div class="ref-color-dot" style="background:${escHtml(c)}"></div>`).join('');
+        return `<div class="ref-frame-card">
+          ${frameImg}
+          <div class="ref-meta">
+            <div class="ref-header">
+              <span class="ref-ts">${escHtml(kf.timestamp || '')}</span>
+              <span class="ref-comp">${escHtml(kf.compositionType || '')}</span>
+            </div>
+            <div class="ref-desc">${escHtml(kf.description || '')}</div>
+            <div class="ref-colors">${colorDots}</div>
+          </div>
+        </div>`;
+      }).join('');
+    } else {
+      refCard.style.display = 'none';
+    }
+
     document.getElementById('results-section').classList.add('visible');
     document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
     document.getElementById('saved-banner').classList.remove('visible');
@@ -684,9 +761,16 @@
     const btn = document.getElementById('save-btn');
     btn.disabled = true; btn.textContent = 'Saving…';
 
-    const thumbnail = currentMode === 'upload' && extractedFrames.length > 0
+    const thumbnail = extractedFrames.length > 0
       ? extractedFrames[0].base64
       : null;
+
+    // Save all extracted frames as reference images (upload mode provides actual frames)
+    const referenceFrames = extractedFrames.map((f, i) => ({
+      base64: f.base64,
+      timestamp: f.timestamp ? formatTime(f.timestamp) : null,
+      keyframeAnalysis: analysisResult.keyframes?.[i] || null,
+    }));
 
     const payload = {
       ...analysisResult,
@@ -694,6 +778,7 @@
       sourceUrl:  currentMode === 'youtube' ? document.getElementById('yt-url').value.trim() : null,
       sourceName: currentMode === 'upload'  ? (selectedFile?.name || null)                  : null,
       thumbnail,
+      referenceFrames: referenceFrames.length > 0 ? referenceFrames : null,
     };
 
     try {
@@ -710,7 +795,7 @@
       document.getElementById('saved-banner').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
       // Store the style ID so Workflow can pre-select it
-      sessionStorage.setItem('workflow_style_id', data.id);
+      sessionStorage.setItem('workflow_style_id', data.id); // ephemeral cross-page transfer
 
     } catch (err) {
       errEl.textContent = 'Save failed: ' + err.message;

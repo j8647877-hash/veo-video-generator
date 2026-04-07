@@ -609,19 +609,38 @@
 </div>
 
 <script>
-  // Auth guard
-  const token = sessionStorage.getItem('access_token');
+  // ── Auth helpers ──
+  const AUTH = {
+    get(k)    { return localStorage.getItem(k); },
+    set(k, v) { localStorage.setItem(k, v); },
+    clear()   { ['access_token','id_token','refresh_token','token_expiry','project_id','cors_setup'].forEach(k => localStorage.removeItem(k)); },
+    migrate() { ['access_token','id_token','project_id','cors_setup'].forEach(k => { const v = sessionStorage.getItem(k); if (v) { localStorage.setItem(k, v); sessionStorage.removeItem(k); } }); },
+    async refresh() {
+      const rt = AUTH.get('refresh_token'); if (!rt) return false;
+      try {
+        const res = await fetch('/api/callback?action=refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: rt }) });
+        if (!res.ok) return false;
+        const data = await res.json();
+        AUTH.set('access_token', data.access_token); if (data.id_token) AUTH.set('id_token', data.id_token);
+        AUTH.set('token_expiry', String(Date.now() + (data.expires_in || 3600) * 1000)); token = data.access_token; return true;
+      } catch { return false; }
+    },
+    isExpiringSoon() { const e = Number(AUTH.get('token_expiry') || 0); return e > 0 && Date.now() > e - 5 * 60 * 1000; },
+  };
+  AUTH.migrate();
+
+  let token = AUTH.get('access_token');
   if (!token) window.location.href = '/';
 
-  // User info
   function getEmail() {
-    const t = sessionStorage.getItem('id_token');
-    if (!t) return null;
-    try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email || null; }
-    catch { return null; }
+    const t = AUTH.get('id_token'); if (!t) return null;
+    try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email || null; } catch { return null; }
   }
   document.getElementById('user-email').textContent = getEmail() || 'Signed in';
-  document.getElementById('sign-out-btn').addEventListener('click', () => { sessionStorage.clear(); window.location.href = '/'; });
+  document.getElementById('sign-out-btn').addEventListener('click', () => { AUTH.clear(); window.location.href = '/'; });
+
+  // Auto-refresh
+  (async function() { if (AUTH.isExpiringSoon()) await AUTH.refresh(); setInterval(async () => { if (AUTH.isExpiringSoon()) await AUTH.refresh(); }, 60000); })();
 
   // Pre-fill from config
   (async function loadConfig() {
@@ -632,7 +651,7 @@
       if (cfg.projectId && !document.getElementById('project-id').value)
         document.getElementById('project-id').value = cfg.projectId;
     } catch {}
-    const saved = sessionStorage.getItem('project_id');
+    const saved = AUTH.get('project_id');
     if (saved && !document.getElementById('project-id').value)
       document.getElementById('project-id').value = saved;
   })();
@@ -703,7 +722,7 @@
         body,
       });
       const data = await safeJson(res);
-      if (res.status === 401) { sessionStorage.clear(); window.location.href = '/'; return; }
+      if (res.status === 401) { if (!(await AUTH.refresh())) { AUTH.clear(); window.location.href = '/'; } return; }
       if (!res.ok) throw new Error(`API error ${res.status}: ${data?.error?.message || JSON.stringify(data)}`);
       operationName = data.name;
       if (!operationName) throw new Error('No operation name returned: ' + JSON.stringify(data));

@@ -96,8 +96,14 @@ module.exports = async function handler(req, res) {
     generationConfig: { responseModalities: ['IMAGE'] },
   });
 
+  // Gemini 3.x models require global endpoint; preview models use v1beta1
+  const isGlobal = model.startsWith('gemini-3');
   const apiVersion = model.includes('preview') ? 'v1beta1' : 'v1';
-  const endpoint = `https://${location}-aiplatform.googleapis.com/${apiVersion}/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
+  const host = isGlobal
+    ? `aiplatform.googleapis.com`
+    : `${location}-aiplatform.googleapis.com`;
+  const loc = isGlobal ? 'global' : location;
+  const endpoint = `https://${host}/${apiVersion}/projects/${projectId}/locations/${loc}/publishers/google/models/${model}:generateContent`;
 
   const settled = await Promise.allSettled(
     Array.from({ length: actualCount }, () =>

@@ -96,7 +96,8 @@ module.exports = async function handler(req, res) {
     generationConfig: { responseModalities: ['IMAGE'] },
   });
 
-  const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
+  const apiVersion = model.includes('preview') ? 'v1beta1' : 'v1';
+  const endpoint = `https://${location}-aiplatform.googleapis.com/${apiVersion}/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
 
   const settled = await Promise.allSettled(
     Array.from({ length: actualCount }, () =>

@@ -8,6 +8,7 @@
     { "source": "/agent",        "destination": "/agent.html"        },
     { "source": "/workflow",     "destination": "/workflow.html"     },
     { "source": "/style-cloner", "destination": "/style-cloner.html" },
-    { "source": "/assets",       "destination": "/assets.html"       }
+    { "source": "/assets",       "destination": "/assets.html"       },
+    { "source": "/social",       "destination": "/social.html"       }
   ]
 }

@@ -13,4 +13,8 @@ client_secret_*.json
 # Node
 node_modules/
 
-.vercel
+# Claude Code
+.claude/
+
+# Test screenshots
+test-*.png

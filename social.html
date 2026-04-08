@@ -369,6 +369,14 @@
           <h3>Generated Creative</h3>
         </div>
         <div class="image-grid" id="image-output"></div>
+
+        <div id="edit-section" style="display:none;margin-top:16px;">
+          <div class="field">
+            <label for="edit-prompt">Edit this image</label>
+            <textarea id="edit-prompt" rows="2" placeholder="e.g. Make the background brighter, add a subtle lens flare, change the color to blue..."></textarea>
+          </div>
+          <button class="btn-primary" id="btn-edit-image" style="margin-top:10px;">Apply Edit</button>
+        </div>
       </div>
 
     </div>
@@ -612,6 +620,9 @@
   const imgError = document.getElementById('image-error');
   const imgOutput = document.getElementById('image-output');
   const imgResultSec = document.getElementById('image-result-section');
+  const editSection = document.getElementById('edit-section');
+
+  let lastGeneratedImage = null; // { data, mimeType }
 
   btnGenImg.addEventListener('click', async () => {
     const prompt = document.getElementById('image-prompt').value;
@@ -667,10 +678,11 @@
 
       imgOutput.innerHTML = '';
       data.images.forEach((img, idx) => {
+        lastGeneratedImage = { data: img.data, mimeType: img.mimeType || 'image/png' };
         const card = document.createElement('div');
         card.className = 'image-card';
         const url = `data:${img.mimeType};base64,${img.data}`;
-        
+
         card.innerHTML = `
           <img src="${url}" alt="Generated Image" />
           <div class="image-actions">
@@ -684,15 +696,98 @@
         `;
         imgOutput.appendChild(card);
       });
+      editSection.style.display = 'block';
 
     } catch (err) {
       imgError.textContent = err.message;
       imgError.style.display = 'block';
       imgOutput.innerHTML = '';
       imgResultSec.classList.remove('visible');
+      editSection.style.display = 'none';
     } finally {
       btnGenImg.disabled = false;
       btnGenImg.textContent = 'Generate Image';
+    }
+  });
+
+  // --- Edit / Iterate on generated image ---
+  const btnEditImg = document.getElementById('btn-edit-image');
+  btnEditImg.addEventListener('click', async () => {
+    const editPrompt = document.getElementById('edit-prompt').value.trim();
+    const projectId = document.getElementById('project-id').value.trim();
+
+    if (!editPrompt) {
+      imgError.textContent = 'Please describe how you want to edit the image.';
+      imgError.style.display = 'block';
+      return;
+    }
+    if (!lastGeneratedImage) {
+      imgError.textContent = 'No image to edit. Generate one first.';
+      imgError.style.display = 'block';
+      return;
+    }
+
+    imgError.style.display = 'none';
+    btnEditImg.disabled = true;
+    btnEditImg.textContent = 'Editing...';
+    imgOutput.innerHTML = '<div style="color:#aaa;padding:20px;">Editing image... This may take a few seconds.</div>';
+
+    try {
+      if (AUTH.isExpiringSoon()) await AUTH.refresh();
+      const token = AUTH.get('access_token');
+      if (!token) throw new Error('Not authenticated');
+
+      const body = {
+        prompt: editPrompt,
+        projectId,
+        model: document.getElementById('image-model').value,
+        aspectRatio: document.getElementById('aspect-ratio').value,
+        count: 1,
+        referenceImageData: lastGeneratedImage.data,
+        referenceImageMime: lastGeneratedImage.mimeType,
+        referenceMode: 'edit',
+      };
+
+      const res = await fetch('/api/image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+
+      imgOutput.innerHTML = '';
+      data.images.forEach((img, idx) => {
+        lastGeneratedImage = { data: img.data, mimeType: img.mimeType || 'image/png' };
+        const card = document.createElement('div');
+        card.className = 'image-card';
+        const url = `data:${img.mimeType};base64,${img.data}`;
+
+        card.innerHTML = `
+          <img src="${url}" alt="Edited Image" />
+          <div class="image-actions">
+            <button class="btn-action" onclick="
+              const a = document.createElement('a');
+              a.href = '${url}';
+              a.download = 'creative_${Date.now()}_${idx}.png';
+              a.click();
+            ">Download</button>
+          </div>
+        `;
+        imgOutput.appendChild(card);
+      });
+      document.getElementById('edit-prompt').value = '';
+
+    } catch (err) {
+      imgError.textContent = err.message;
+      imgError.style.display = 'block';
+    } finally {
+      btnEditImg.disabled = false;
+      btnEditImg.textContent = 'Apply Edit';
     }
   });
 
